@@ -26,6 +26,11 @@ import { StockService } from "./stock/stock.service";
 import { StockController } from "./stock/stock.controller";
 import { SuppliersService } from "./suppliers/suppliers.service";
 import { SuppliersController } from "./suppliers/suppliers.controller";
+import { SpacesService } from "./spaces/spaces.service";
+import { StaffService } from "./staff/staff.service";
+import { ResourcesService } from "./resources/resources.service";
+import { LoansService } from "./loans/loans.service";
+import { LoansController, ResourcesController, SpacesController, StaffController } from "./phase5.controllers";
 
 @Module({
   imports: [
@@ -34,7 +39,7 @@ import { SuppliersController } from "./suppliers/suppliers.controller";
     // حد عام سخي لكل عنوان؛ مسارات الدخول لها حد أضيق (@Throttle)
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 600 }]),
   ],
-  controllers: [AuthController, HierarchyController, BrandingController, DashboardController, UsersController, HealthController, CatalogController, AssetsController, StockController, SuppliersController],
+  controllers: [AuthController, HierarchyController, BrandingController, DashboardController, UsersController, HealthController, CatalogController, AssetsController, StockController, SuppliersController, SpacesController, StaffController, ResourcesController, LoansController],
   providers: [
     AuditService,
     AccessService,
@@ -48,6 +53,10 @@ import { SuppliersController } from "./suppliers/suppliers.controller";
     AssetsService,
     StockService,
     SuppliersService,
+    SpacesService,
+    StaffService,
+    ResourcesService,
+    LoansService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AppGuard },
   ],

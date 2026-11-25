@@ -216,6 +216,10 @@ export const assetSchema = z.object({
   acquisitionValue: money,
   supplierId: optId,
   status: z.enum(["AVAILABLE", "DAMAGED", "UNDER_REPAIR"]),
+  /** المرحلة 5: الموقع (فضاء أو ملعب) والمسؤول */
+  roomId: optId,
+  facilityId: optId,
+  responsibleStaffId: optId,
   photoDataUrl: z.string().max(3_000_000).optional().nullable(),
 }).refine((v) => v.trackingMode === "QUANTITY" || v.quantity === 1, { message: "errors.individualQty", path: ["quantity"] });
 export type AssetInput = z.infer<typeof assetSchema>;
@@ -289,3 +293,112 @@ export const inventoryPatternSchema = z.object({
     .regex(/^[A-Za-z0-9{}:\-/_.]+$/, "errors.codeChars")
     .refine((v) => /\{SEQ(?::\d{1,2})?\}/.test(v), "errors.patternSeq"),
 });
+
+// =====================================================================
+// المرحلة 5: البنايات والفضاءات والملاعب، الموظفون، الوسائل التعليمية، الإعارة
+// =====================================================================
+export const SPACE_STATUSES = ["GOOD", "NEEDS_MAINTENANCE", "OUT_OF_SERVICE"] as const;
+const spaceStatus = z.enum(SPACE_STATUSES);
+const optInt = (max: number) => z.number({ error: "errors.number" }).int("errors.integer").min(0, "errors.nonNegative").max(max, "errors.tooLarge").optional().nullable();
+const notes = z.string().trim().max(1000, "errors.tooLong").optional().or(z.literal(""));
+
+export const buildingSchema = z.object({
+  code,
+  name: req(z.string()).max(150, "errors.tooLong"),
+  floors: optInt(50),
+  builtYear: z.number({ error: "errors.number" }).int("errors.integer").min(1900, "errors.tooSmall").max(2100, "errors.tooLarge").optional().nullable(),
+  status: spaceStatus,
+  notes,
+});
+export type BuildingInput = z.infer<typeof buildingSchema>;
+
+export const roomSchema = z.object({
+  code,
+  name: req(z.string()).max(150, "errors.tooLong"),
+  buildingId: optId,
+  spaceTypeId: req(z.string()),
+  floor: optionalText,
+  locationNote: optionalText,
+  areaM2: z.number({ error: "errors.number" }).min(0, "errors.nonNegative").max(1_000_000, "errors.tooLarge").optional().nullable(),
+  capacity: optInt(10_000),
+  status: spaceStatus,
+});
+export type RoomInput = z.infer<typeof roomSchema>;
+
+export const facilitySchema = z.object({
+  code,
+  name: req(z.string()).max(150, "errors.tooLong"),
+  facilityTypeId: req(z.string()),
+  roomId: optId,
+  surfaceCondition: optionalText,
+  netsGoalsCondition: optionalText,
+  status: spaceStatus,
+  notes,
+});
+export type FacilityInput = z.infer<typeof facilitySchema>;
+
+export const STAFF_TYPES = ["TEACHER", "ADMINISTRATIVE", "SUPPORT", "OTHER"] as const;
+export const staffSchema = z.object({
+  fullNameAr: req(z.string()).max(120, "errors.tooLong"),
+  fullNameFr: optionalText,
+  type: z.enum(STAFF_TYPES),
+  staffNumber: z.string().trim().max(30, "errors.tooLong").regex(/^[A-Za-z0-9_-]*$/, "errors.codeChars").optional().or(z.literal("")),
+  phone,
+  email,
+  isActive: z.boolean().optional(),
+});
+export type StaffInput = z.infer<typeof staffSchema>;
+
+export const resourceSchema = z
+  .object({
+    code,
+    name: req(z.string()).max(200, "errors.tooLong"),
+    resourceTypeId: optId,
+    categoryId: optId,
+    trackingMode: z.enum(["INDIVIDUAL", "QUANTITY"]),
+    /** الأصناف الكمية فقط؛ الفردية تُحسب من وحداتها */
+    quantityTotal: z.number({ error: "errors.number" }).int("errors.integer").min(0, "errors.nonNegative").max(100_000, "errors.tooLarge"),
+    roomId: optId,
+    acquisitionDate: isoDate,
+    isLendable: z.boolean(),
+    photoDataUrl: z.string().max(3_000_000).optional().nullable(),
+  });
+export type ResourceInput = z.infer<typeof resourceSchema>;
+
+export const UNIT_STATUSES = ["AVAILABLE", "DAMAGED", "UNDER_MAINTENANCE", "DISPOSED"] as const;
+export const resourceUnitSchema = z.object({
+  /** فارغ = يُولَّد من رمز الصنف: CODE-001 */
+  inventoryNumber: z.string().trim().max(40, "errors.tooLong").regex(/^[A-Za-z0-9/_.-]*$/, "errors.codeChars").optional(),
+  serialNumber: optionalText,
+  roomId: optId,
+  /** ON_LOAN لا يُضبط يدوياً: تديره الإعارة والإرجاع */
+  status: z.enum(UNIT_STATUSES),
+});
+export type ResourceUnitInput = z.infer<typeof resourceUnitSchema>;
+
+/** تعديل كمية المعطوب في صنف كمي (إصلاح أو تلف خارج الإعارة) بسبب إلزامي. */
+export const resourceDamageSchema = z.object({
+  quantityDamaged: z.number({ error: "errors.number" }).int("errors.integer").min(0, "errors.nonNegative"),
+  reason,
+});
+
+export const loanSchema = z.object({
+  resourceId: req(z.string()),
+  unitId: optId,
+  quantity: z.number({ error: "errors.number" }).int("errors.integer").min(1, "errors.positive").max(10_000, "errors.tooLarge"),
+  borrowerStaffId: req(z.string()),
+  dueAt: req(z.string()).regex(/^\d{4}-\d{2}-\d{2}$/, "errors.date"),
+  conditionOut: optionalText,
+  notes,
+  clientOpId: z.string().max(80).optional(),
+});
+export type LoanInput = z.infer<typeof loanSchema>;
+
+export const loanReturnSchema = z.object({
+  quantity: z.number({ error: "errors.number" }).int("errors.integer").min(1, "errors.positive").max(10_000, "errors.tooLarge"),
+  conditionIn: optionalText,
+  damaged: z.boolean(),
+  notes,
+  clientOpId: z.string().max(80).optional(),
+});
+export type LoanReturnInput = z.infer<typeof loanReturnSchema>;

@@ -5,6 +5,8 @@ import { LOGO_MAX_BYTES, LOGO_TYPES, type AssetInput } from "@hassan/validation"
 import { PrismaService } from "../prisma/prisma.service";
 import { AuditService } from "../common/audit.service";
 import { CatalogService } from "../catalog/catalog.service";
+import { SpacesService } from "../spaces/spaces.service";
+import { StaffService } from "../staff/staff.service";
 import { decodeDataUrl, StorageService } from "../files/storage.service";
 import { nextSequence } from "../common/sequences";
 import { E } from "../common/errors";
@@ -16,6 +18,8 @@ export interface AssetQuery {
   categoryId?: string;
   status?: string;
   archived?: boolean;
+  roomId?: string;
+  responsibleStaffId?: string;
   page: number;
   pageSize: number;
 }
@@ -23,6 +27,9 @@ export interface AssetQuery {
 const include = {
   category: { select: { id: true, code: true, nameAr: true, nameFr: true } },
   supplier: { select: { id: true, name: true } },
+  room: { select: { id: true, code: true, name: true } },
+  facility: { select: { id: true, code: true, name: true } },
+  responsible: { select: { id: true, fullNameAr: true } },
 } as const;
 type Row = Prisma.AssetGetPayload<{ include: typeof include }>;
 
@@ -35,6 +42,8 @@ export class AssetsService {
     private audit: AuditService,
     private catalog: CatalogService,
     private storage: StorageService,
+    private spaces: SpacesService,
+    private staff: StaffService,
   ) {}
 
   private dto(a: Row) {
@@ -55,6 +64,12 @@ export class AssetsService {
       supplierId: a.supplierId,
       supplier: a.supplier,
       status: a.status,
+      roomId: a.roomId,
+      room: a.room?.name,
+      facilityId: a.facilityId,
+      facility: a.facility?.name,
+      responsibleStaffId: a.responsibleStaffId,
+      responsible: a.responsible?.fullNameAr,
       qrToken: a.qrToken,
       hasPhoto: !!a.photoFileId,
       archivedAt: a.archivedAt?.toISOString(),
@@ -69,6 +84,8 @@ export class AssetsService {
       schoolId,
       archivedAt: f.archived ? { not: null } : null,
       ...(f.categoryId && UUID_RE.test(f.categoryId) ? { categoryId: f.categoryId } : {}),
+      ...(f.roomId && UUID_RE.test(f.roomId) ? { roomId: f.roomId } : {}),
+      ...(f.responsibleStaffId && UUID_RE.test(f.responsibleStaffId) ? { responsibleStaffId: f.responsibleStaffId } : {}),
       ...(f.status && ["AVAILABLE", "DAMAGED", "UNDER_REPAIR", "DISPOSED"].includes(f.status) ? { status: f.status as never } : {}),
     };
     let rows = await this.prisma.asset.findMany({ where, include, orderBy: { inventoryNumber: "asc" } });
@@ -89,6 +106,9 @@ export class AssetsService {
     await this.catalog.assertLookup(schoolId, "ASSET_TYPE", input.assetTypeId, "assetTypeId");
     await this.catalog.assertLookup(schoolId, "FUNDING_SOURCE", input.fundingSourceId, "fundingSourceId");
     await this.catalog.assertSupplier(schoolId, input.supplierId);
+    await this.spaces.assertRoom(schoolId, input.roomId);
+    await this.spaces.assertFacility(schoolId, input.facilityId);
+    await this.staff.assertStaff(schoolId, input.responsibleStaffId, "responsibleStaffId");
   }
 
   private data(input: AssetInput) {
@@ -98,6 +118,9 @@ export class AssetsService {
       assetTypeId: input.assetTypeId ?? "",
       fundingSourceId: input.fundingSourceId ?? "",
       supplierId: input.supplierId ?? "",
+      roomId: input.roomId ?? "",
+      facilityId: input.facilityId ?? "",
+      responsibleStaffId: input.responsibleStaffId ?? "",
     });
     return {
       name: input.name.trim(),
@@ -142,6 +165,7 @@ export class AssetsService {
           ? (await this.storage.save(tx, { schoolId, buf: photo.buf, mime: photo.mime, originalName: "asset-photo", uploadedById: user.id })).id
           : null;
         const a = await tx.asset.create({ data: { schoolId, inventoryNumber, photoFileId, createdById: user.id, ...this.data(input) }, include });
+        if (a.roomId) await tx.assetLocation.create({ data: { assetId: a.id, roomId: a.roomId } });
         await this.audit.log({ action: "ASSET_CREATE", entityType: "Asset", entityId: a.id, after: { ...this.dto(a), nameAr: a.name } }, req, tx);
         return a;
       });
@@ -174,6 +198,11 @@ export class AssetsService {
           data: { ...this.data(input), inventoryNumber: manual || before.inventoryNumber, photoFileId },
           include,
         });
+        // سجل المواقع: إغلاق الموقع السابق وفتح الجديد عند تغيير الفضاء
+        if (a.roomId !== before.roomId) {
+          await tx.assetLocation.updateMany({ where: { assetId: id, toDate: null }, data: { toDate: new Date() } });
+          if (a.roomId) await tx.assetLocation.create({ data: { assetId: id, roomId: a.roomId } });
+        }
         await this.audit.log({ action: "ASSET_UPDATE", entityType: "Asset", entityId: id, before: this.dto(before), after: { ...this.dto(a), nameAr: a.name } }, req, tx);
         return a;
       });
@@ -226,7 +255,7 @@ export class AssetsService {
   }
 }
 
-const TRACKED = ["inventoryNumber", "name", "categoryId", "status", "quantity", "serialNumber", "acquisitionDate", "acquisitionValue", "supplierId", "description"];
+const TRACKED = ["inventoryNumber", "name", "categoryId", "status", "quantity", "serialNumber", "acquisitionDate", "acquisitionValue", "supplierId", "description", "roomId", "facilityId", "responsibleStaffId"];
 function diff(before: unknown, after: unknown) {
   if (!before || !after) return undefined;
   const b = before as Record<string, unknown>;

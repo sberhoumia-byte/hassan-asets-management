@@ -29,6 +29,13 @@ export const ACTIVITY_KEYS: Record<string, string> = {
   STOCK_ADJUST: "activity.stockAdjust",
   STOCK_REVERSE: "activity.stockReverse",
   SUPPLIER_CREATE: "activity.supplierCreated",
+  BUILDING_CREATE: "activity.buildingCreated",
+  ROOM_CREATE: "activity.roomCreated",
+  FACILITY_CREATE: "activity.facilityCreated",
+  STAFF_CREATE: "activity.staffCreated",
+  RESOURCE_CREATE: "activity.resourceCreated",
+  LOAN_CREATE: "activity.loanCreated",
+  LOAN_RETURN: "activity.loanReturned",
 };
 /** عمليات المراجع المشتركة (بلا مؤسسة) التي تظهر في نشاط كل مؤسسة. */
 const SHARED_ACTIONS = ["ACADEMY_CREATE", "DIRECTORATE_CREATE"];

@@ -6,6 +6,7 @@ import { parse } from "../common/zod";
 import { E } from "../common/errors";
 import { AccessService } from "../rbac/access.service";
 import { AssetsService } from "./assets.service";
+import { ResourcesService } from "../resources/resources.service";
 
 const page = (v?: string, d = 1) => Math.max(1, Math.min(Number(v) || d, 10_000));
 
@@ -15,6 +16,7 @@ export class AssetsController {
   constructor(
     private assets: AssetsService,
     private access: AccessService,
+    private resources: ResourcesService,
   ) {}
 
   @Perm("assets.view")
@@ -26,9 +28,11 @@ export class AssetsController {
     @Query("status") status?: string,
     @Query("archived") archived?: string,
     @Query("page") p?: string,
+    @Query("roomId") roomId?: string,
+    @Query("responsibleStaffId") responsibleStaffId?: string,
     @Query("pageSize") ps?: string,
   ) {
-    return this.assets.list(schoolId, { q: q?.slice(0, 100), categoryId, status, archived: archived === "1", page: page(p), pageSize: Math.min(page(ps, 25), 200) });
+    return this.assets.list(schoolId, { q: q?.slice(0, 100), categoryId, status, archived: archived === "1", roomId, responsibleStaffId, page: page(p), pageSize: Math.min(page(ps, 25), 200) });
   }
 
   @Perm("assets.create")
@@ -65,7 +69,8 @@ export class AssetsController {
   /** رمز QR يحمل qrToken فقط. لا يكشف شيئاً لمن لا يصل إلى مؤسسة الكيان. */
   @Get("scan/:qrToken")
   async scan(@Param("qrToken") token: string, @CurrentUser() u: AuthUser) {
-    const r = await this.assets.scan(token);
+    // ممتلك أو وحدة وسيلة تعليمية
+    const r = (await this.resources.scanUnit(token)) ?? (await this.assets.scan(token));
     if (!(await this.access.canAccessSchool(u.id, r.schoolId))) throw E.notFound();
     return r;
   }

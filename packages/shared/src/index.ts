@@ -133,6 +133,28 @@ export const GLOBAL_LOOKUPS: Record<string, { code: string; ar: string; fr: stri
     { code: "CORRECTIVE", ar: "إصلاحية", fr: "Corrective" },
     { code: "EMERGENCY", ar: "استعجالية", fr: "Urgente" },
   ],
+  FACILITY_TYPE: [
+    { code: "FOOTBALL", ar: "ملعب كرة القدم", fr: "Terrain de football" },
+    { code: "BASKETBALL", ar: "ملعب كرة السلة", fr: "Terrain de basket-ball" },
+    { code: "HANDBALL", ar: "ملعب كرة اليد", fr: "Terrain de handball" },
+    { code: "VOLLEYBALL", ar: "ملعب الكرة الطائرة", fr: "Terrain de volley-ball" },
+    { code: "MULTISPORT", ar: "ملعب متعدد الرياضات", fr: "Terrain multisport" },
+    { code: "SPORTS_HALL", ar: "قاعة رياضية مغطاة", fr: "Salle de sport couverte" },
+    { code: "PE_AREA", ar: "فضاء التربية البدنية", fr: "Espace d'éducation physique" },
+    { code: "OTHER", ar: "مرفق آخر", fr: "Autre installation" },
+  ],
+  RESOURCE_TYPE: [
+    { code: "PROJECTOR", ar: "جهاز عرض", fr: "Vidéoprojecteur" },
+    { code: "COMPUTER", ar: "حاسوب", fr: "Ordinateur" },
+    { code: "TABLET", ar: "لوحة إلكترونية", fr: "Tablette" },
+    { code: "MAP", ar: "خريطة", fr: "Carte" },
+    { code: "SCIENCE_KIT", ar: "عدة علمية", fr: "Kit scientifique" },
+    { code: "MATH_KIT", ar: "عدة رياضيات", fr: "Kit de mathématiques" },
+    { code: "BOOK", ar: "كتاب", fr: "Livre" },
+    { code: "SPORTS", ar: "عتاد رياضي", fr: "Matériel sportif" },
+    { code: "AUDIO", ar: "عتاد سمعي", fr: "Matériel audio" },
+    { code: "OTHER", ar: "وسيلة أخرى", fr: "Autre support" },
+  ],
   CONDITION: [
     { code: "GOOD", ar: "جيدة", fr: "Bon" },
     { code: "FAIR", ar: "متوسطة", fr: "Moyen" },
@@ -167,6 +189,7 @@ export * from "./text";
 export * from "./schoolYear";
 export * from "./numbering";
 
-/** القوائم المرجعية التي تديرها المؤسسة من الواجهة (المرحلة 4). */
-export const LOOKUP_KEYS = ["ASSET_TYPE", "FUNDING_SOURCE", "UNIT_OF_MEASURE", "SUPPLIER_ACTIVITY", "CONDITION", "DOCUMENT_CATEGORY", "SPACE_TYPE", "MAINTENANCE_TYPE_LABEL"] as const;
+/** القوائم المرجعية التي تديرها المؤسسة من الواجهة (المرحلة 4، وأُضيفت FACILITY_TYPE و RESOURCE_TYPE في المرحلة 5). */
+export const LOOKUP_KEYS = ["ASSET_TYPE", "FUNDING_SOURCE", "UNIT_OF_MEASURE", "SUPPLIER_ACTIVITY", "CONDITION", "DOCUMENT_CATEGORY", "SPACE_TYPE", "FACILITY_TYPE", "RESOURCE_TYPE", "MAINTENANCE_TYPE_LABEL"] as const;
 export type LookupKey = (typeof LOOKUP_KEYS)[number];
+export * from "./loans";
