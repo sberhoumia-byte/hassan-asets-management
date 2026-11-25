@@ -43,6 +43,13 @@ import { ImportsService } from "./imports/imports.service";
 import { ImportsController } from "./imports/imports.controller";
 import { DocumentsService } from "./documents/documents.service";
 import { DocumentsController } from "./documents/documents.controller";
+import { FloorPlanService } from "./floorplan/floorplan.service";
+import { FloorPlanController } from "./floorplan/floorplan.controller";
+import { SyncService } from "./sync/sync.service";
+import { SyncController } from "./sync/sync.controller";
+import { NotificationsService } from "./notifications/notifications.service";
+import { AuditLogService } from "./notifications/audit-log.service";
+import { NotificationsController } from "./notifications/notifications.controller";
 
 @Module({
   imports: [
@@ -51,7 +58,7 @@ import { DocumentsController } from "./documents/documents.controller";
     // حد عام سخي لكل عنوان؛ مسارات الدخول لها حد أضيق (@Throttle)
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 600 }]),
   ],
-  controllers: [AuthController, HierarchyController, BrandingController, DashboardController, UsersController, HealthController, CatalogController, AssetsController, StockController, SuppliersController, SpacesController, StaffController, ResourcesController, LoansController, MaintenanceController, CustodyController, InventoryController, PurchasingController, ReportsController, ImportsController, DocumentsController],
+  controllers: [AuthController, HierarchyController, BrandingController, DashboardController, UsersController, HealthController, CatalogController, AssetsController, StockController, SuppliersController, SpacesController, StaffController, ResourcesController, LoansController, MaintenanceController, CustodyController, InventoryController, PurchasingController, ReportsController, ImportsController, DocumentsController, NotificationsController, FloorPlanController, SyncController],
   providers: [
     AuditService,
     AccessService,
@@ -77,6 +84,10 @@ import { DocumentsController } from "./documents/documents.controller";
     ReportsService,
     ImportsService,
     DocumentsService,
+    NotificationsService,
+    AuditLogService,
+    FloorPlanService,
+    SyncService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AppGuard },
   ],

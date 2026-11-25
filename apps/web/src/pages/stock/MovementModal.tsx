@@ -9,6 +9,7 @@ import { api, ApiError, type StockItem, type Warehouse } from "../../api";
 import { useI18n } from "../../i18n";
 import { useCatalog } from "../../hooks/useCatalog";
 import { fieldError, fmtQty, handleFormError, newOpId, today } from "../../lib/forms";
+import { isOfflineError, useOutbox } from "../../offline/OutboxProvider";
 
 export type MovementKind = "in" | "out" | "return" | "transfer" | "adjust";
 
@@ -39,6 +40,7 @@ export function MovementModal({
   const cat = useCatalog();
   const qc = useQueryClient();
   const [opId] = useState(newOpId);
+  const outbox = useOutbox();
   const activeWh = warehouses.filter((w) => w.isActive);
   const defaults: Values = {
     itemId: itemId ?? "",
@@ -68,6 +70,15 @@ export function MovementModal({
   const submit = f.handleSubmit(async (v) => {
     const body: Values = { ...v, clientOpId: opId };
     for (const k of ["occurredAt", "expiryDate", "supplierId"]) if (body[k] === "") delete body[k];
+    // الإدخال والصرف فقط يُقبلان دون اتصال؛ الخادم يعيد التحقق من الرصيد عند المزامنة
+    const offlineOk = outbox.enabled && (kind === "in" || kind === "out");
+    const queue = async () => {
+      const it = items.find((i) => i.id === body.itemId);
+      await outbox.queue({ schoolId, clientOpId: opId, operation: kind === "in" ? "stock.in" : "stock.out", payload: body, label: `${t(`stock.mv.${kind}`)} · ${it?.code ?? ""} × ${fmtQty(Number(body.quantity))}` });
+      notifications.show({ color: "orange", message: t("outbox.queued") });
+      onClose();
+    };
+    if (offlineOk && !navigator.onLine) return queue();
     try {
       const s = api.stock!;
       const r =
@@ -88,6 +99,7 @@ export function MovementModal({
       notifications.show({ color: "green", message: t("stock.recorded", { numbers: r.movements.join("، ") }) });
       onClose();
     } catch (e) {
+      if (offlineOk && isOfflineError(e)) return queue();
       if (e instanceof ApiError && e.code === "STOCK_INSUFFICIENT") {
         const d = e.details as { available: number; requested: number };
         f.setError("quantity", { message: t("errors.stockInsufficient", { available: fmtQty(d.available), requested: fmtQty(d.requested), unit }) });
@@ -142,6 +154,9 @@ export function MovementModal({
       <form onSubmit={submit} noValidate data-testid="movement-form">
         <Stack>
           <Text size="sm" c="dimmed">{t(`stock.mvHint.${kind}`)}</Text>
+          {outbox.enabled && !outbox.online && (
+            <Alert color="orange" variant="light" py={6} data-testid="mv-offline">{t(kind === "in" || kind === "out" ? "outbox.formOffline" : "outbox.formOnlineOnly")}</Alert>
+          )}
           <Grid gutter="sm">
             <Grid.Col span={12}>{sel("itemId", t("stock.item"), itemOptions, { required: true, testid: "mv-item" })}</Grid.Col>
             {kind === "transfer" ? (

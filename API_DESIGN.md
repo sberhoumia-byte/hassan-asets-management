@@ -130,7 +130,7 @@
 | GET/PUT | `/settings/numbering` | `{inventoryNumberPattern}` يجب أن يتضمن `{SEQ}` أو `{SEQ:n}` |
 
 ### 3.19-أ لوحة القيادة ✅
-`GET /schools/:schoolId/dashboard/{stats,alerts,activity}` 🔒 `dashboard.view` — أرقام محسوبة من القاعدة، وآخر العمليات من سجل التدقيق. `GET /notifications` إشعارات المستخدم. `GET /health` فحص الخادم والقاعدة.
+`GET /schools/:schoolId/dashboard/{stats,alerts,activity}` 🔒 `dashboard.view` — أرقام محسوبة من القاعدة، وآخر العمليات من سجل التدقيق. الإشعارات: 3.19. `GET /health` فحص الخادم والقاعدة.
 
 ### 3.6 الممتلكات ✅
 المسارات تحت `/schools/:schoolId`.
@@ -249,8 +249,14 @@
 ### 3.14 الموردون ✅ (الطلبيات والفواتير: 3.12)
 `GET /schools/:schoolId/suppliers?q=&archived=1` 🔒 `suppliers.view` (مع عدد الاستعمالات)، `POST`/`PUT` 🔒 `suppliers.create`/`update` (ICE مكرر → `409 DUPLICATE_ICE`)، `POST /:id/archive` و`/:id/restore` 🔒 `suppliers.archive` — لا حذف. `GET /suppliers/:id/orders` و`/invoices`: المرحلة 6.
 
-### 3.15 المخطط التفاعلي
-`/floor-plans` CRUD، `POST /floor-plans/:id/background` (صورة أو PDF)، `PUT /floor-plans/:id/shapes` (حفظ الأشكال وربطها)، `GET /floor-plans/:id/status` (ألوان حسب الحالة والأعطاب).
+### 3.15 المخطط التفاعلي ✅
+`GET /schools/:schoolId/floor-plans` 🔒 `floorplan.view` (الاسم، أبعاد الخلفية، عدد الأشكال).
+`GET /floor-plans/:id` 🔒 `floorplan.view` → المخطط وأشكاله، ولكل شكل `status: {level: GOOD|WARN|BAD|NONE, targetCode, targetName, spaceStatus, openMaintenance, assets, damagedAssets}` محسوبة من البيانات الحية: `BAD` = الفضاء أو المرفق `OUT_OF_SERVICE`؛ `WARN` = `NEEDS_MAINTENANCE` أو طلب صيانة مفتوح (`NEW/UNDER_REVIEW/IN_REPAIR`) أو ممتلك `DAMAGED/UNDER_REPAIR`؛ `NONE` = غير مرتبط.
+`GET /floor-plans/:id/background` 🔒 `floorplan.view` → الصورة (`Cache-Control: private`).
+`POST /floor-plans` 🔒 `floorplan.create` و`PUT /floor-plans/:id` 🔒 `floorplan.update` `{name, background?}`: `background` data URL لصورة PNG/JPEG/WEBP حتى 5 ميغابايت (النوع والأبعاد تُقرأ من محتوى الملف، 50 إلى 12000 بكسل)، `""` يزيل الخلفية، غيابه يبقيها.
+`PUT /floor-plans/:id/shapes` 🔒 `floorplan.update` `{shapes:[{kind, geometry, label?, roomId?|facilityId?}]}` (حتى 500، استبدال كامل في معاملة): الإحداثيات نسبية 0..1 — `RECTANGLE {x,y,w,h}`، `CIRCLE {x,y,r}` (r نسبة من العرض)، `POLYGON {points:[x1,y1,...]}` (3 نقاط فأكثر)، `MARKER {x,y}`؛ الفضاء أو المرفق يجب أن يتبع نفس المؤسسة.
+`DELETE /floor-plans/:id` 🔒 `floorplan.archive` — سجل التدقيق `FLOORPLAN_DELETE` يحفظ نسخة كاملة من الأشكال.
+غير منجز: خلفية PDF.
 
 ### 3.16 الاستيراد ✅ (التصدير عبر التقارير 3.18)
 الكيانات: `ASSETS`، `STAFF`، `SUPPLIERS`، `STOCK` (بطاقات المواد فقط، بلا أرصدة). كل المسارات تحت `/schools/:schoolId/imports`.
@@ -302,13 +308,21 @@
 
 ### 3.19 لوحة القيادة والإشعارات والتدقيق
 `GET /dashboard/stats`, `/dashboard/charts` (✅ 12 شهراً، `dashboard.view`), `/dashboard/alerts`, `/dashboard/activity` — كلها محسوبة من القاعدة.
-`GET /notifications`, `POST /notifications/:id/read`, `PUT /notifications/preferences`.
-`GET /audit-logs` 🔒 `audit.view` (قراءة فقط، لا مسار للتعديل أو الحذف).
+**الإشعارات ✅** (المرحلة 8): تُولَّد بفحص دوري على الخادم كل `NOTIFY_INTERVAL_MINUTES` دقيقة (افتراضياً 15؛ 0 يعطله) لكل مؤسسة نشطة، بقفل استشاري (`pg_try_advisory_xact_lock`) يمنع فحصين متزامنين. الأنواع: `STOCK_OUT, STOCK_LOW, STOCK_EXPIRY, LOAN_OVERDUE, MAINTENANCE_URGENT, MAINTENANCE_DUE, APPROVAL_REQUEST, INVENTORY_SESSION, DOCUMENT_EXPIRY`. المستلمون حسب الصلاحية الفعلية (مثلاً `stock.view`)، والمصادقة لصاحب الدور المطلوب في الخطوة، والجرد للمكلفين، والوثيقة المقيدة لمن يملك `documents.update`. عدم التكرار بمفتاح `(userId, dedupeKey)` فريد؛ زوال الشرط يحرر المفتاح فيُعاد التنبيه إن عاد الشرط، والإشعارات القديمة تبقى.
+`GET /notifications?unread=1&limit=` → `{unread, items:[{id, at, type, titleKey, vars, schoolId, entityType, entityId, readAt}]}` (النص يُركَّب في الواجهة من `titleKey` و`vars` حسب اللغة).
+`POST /notifications/:id/read` (إشعار مستخدم آخر → 404)، `POST /notifications/read-all`.
+`GET/PUT /notifications/preferences` `{items:[{type, enabled}]}` (نوع غير معروف → 400؛ القناة داخل التطبيق فقط).
+`POST /schools/:schoolId/notifications/run` 🔒 `settings.manage` → `{created, active}` (تشغيل يدوي للفحص).
+**سجل التدقيق ✅**: `GET /schools/:schoolId/audit-logs?userId=&action=&entityType=&entityId=&from=&to=&page=&pageSize=` 🔒 `audit.view` → `{total, page, pageSize, items:[{id, at, action, entityType, entityId, user, userId, ip, requestId, before, after}]}` (فترة معكوسة → 400). `GET /audit-logs/facets` → القيم المتاحة للتصفية. قراءة فقط: لا مسار للتعديل أو الحذف (والجدول إلحاق فقط بقادح في القاعدة).
 
 ### 3.20 النسخ الاحتياطي
 `GET /backups`، `POST /backups` 🔒، `POST /backups/:id/verify`، `GET /backups/:id/download` 🔒، `POST /backups/:id/restore` 🔒 `backup.restore` + إعادة إدخال كلمة المرور + عبارة تأكيد، `PUT /backups/schedule`.
 
-### 3.21 المزامنة دون اتصال
-`POST /sync/push` `{deviceId, operations:[{clientOpId, operation, payload, baseVersion, clientCreatedAt}]}` → لكل عملية: `APPLIED | CONFLICT | REJECTED` مع السبب.
-`GET /sync/pull?since=` → التغييرات في الكيانات المسموح تخزينها محلياً.
-العمليات الحساسة (صرف مخزون، إعارة، عدّ جرد) تبقى «قيد التحقق» في الواجهة حتى يرد الخادم بـ `APPLIED`.
+### 3.21 المزامنة دون اتصال ✅ (جزئياً)
+`POST /schools/:schoolId/sync` `{deviceId, operations:[{clientOpId (UUID), operation, payload, clientCreatedAt}]}` (1 إلى 100) → `{results:[{clientOpId, status: APPLIED|CONFLICT|REJECTED|RECEIVED, error?, details?, resultRef?, replayed?}]}`.
+العمليات المقبولة: `stock.in` و`stock.out` (🔒 `stock.create`) و`inventory.count` (🔒 `inventory.view` + التكليف؛ الحمولة تضم `sessionId`). تُطبَّق بالترتيب عبر نفس الخدمات المعتادة (نفس التحقق وسجل التدقيق)، والصلاحية تُفحص لكل عملية. كل عملية تُسجَّل في `offline_sync_operations`؛ `clientOpId` فريد فإعادة الإرسال (أو إرسال متزامن) تعيد النتيجة الأولى بـ`replayed: true` ولا تطبق شيئاً مرتين.
+- `CONFLICT`: حالة تغيرت على الخادم أثناء الانقطاع — `STOCK_INSUFFICIENT`، `SESSION_NOT_OPEN`، `ITEM_INACTIVE`، `WAREHOUSE_INACTIVE`، `COUNT_NEWER` (عدّ أحدث من مستخدم آخر بعد `clientCreatedAt`؛ لا يُكتب فوقه).
+- `REJECTED`: `VALIDATION_ERROR`، `FORBIDDEN`، `NOT_FOUND`، `FOREIGN_OPERATION` (المعرّف لمستخدم أو مؤسسة أخرى).
+- `RECEIVED`: خطأ غير متوقع؛ تبقى العملية وتُعاد محاولتها.
+`GET /schools/:schoolId/sync` → آخر 100 عملية للمستخدم.
+غير منجز: `GET /sync/pull` (لا تخزين محلي لبيانات الخادم؛ العمل دون اتصال داخل جلسة مفتوحة فقط)، وعمليات الإعارة والإرجاع دون اتصال.

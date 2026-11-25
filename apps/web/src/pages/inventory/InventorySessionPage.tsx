@@ -10,6 +10,7 @@ import { useAuth } from "../../auth/AuthProvider";
 import { useI18n } from "../../i18n";
 import { usePlaces } from "../../hooks/usePlaces";
 import { fmtQty, newOpId, notifyError } from "../../lib/forms";
+import { isOfflineError, useOutbox } from "../../offline/OutboxProvider";
 import { InventoryStatusBadge, SessionFormModal } from "./InventoryPage";
 
 const ISSUE_COLOR: Record<string, string> = { MISSING: "red", NOT_COUNTED: "gray", SURPLUS: "orange", UNEXPECTED: "grape", MISPLACED: "yellow" };
@@ -151,6 +152,9 @@ function LinesTab({ schoolId, session, onCounted }: { schoolId: string; session:
   const [counting, setCounting] = useState<{ line?: InventoryLine; qrToken?: string } | null>(null);
   const f = { filter: filter === "all" ? undefined : filter, roomId: roomId ?? undefined, q: dq };
   const lines = useQuery({ queryKey: ["inv-lines", schoolId, session.id, f], queryFn: () => api.inventory!.lines(schoolId, session.id, f) });
+  const outbox = useOutbox();
+  // أعداد سُجلت دون اتصال ولم تُرسل بعد (تُعرض بجانب السطر حتى تُطبَّق)
+  const queued = new Map(outbox.entries.filter((e) => e.status === "PENDING" && e.operation === "inventory.count" && e.payload.sessionId === session.id && e.payload.lineId).map((e) => [e.payload.lineId as string, Number(e.payload.countedQty)]));
   const open = session.status === "OPEN";
   const roomOpts = session.rooms.length ? session.rooms.map((r) => ({ value: r.id, label: r.label })) : places.roomOptions;
   const onScan = () => {
@@ -222,7 +226,12 @@ function LinesTab({ schoolId, session, onCounted }: { schoolId: string; session:
                 </Table.Td>
                 <Table.Td>{l.expectedRoom ?? "—"}</Table.Td>
                 <Table.Td>{fmtQty(l.expectedQty)}</Table.Td>
-                <Table.Td fw={600}>{l.countedQty === undefined ? "—" : fmtQty(l.countedQty)}</Table.Td>
+                <Table.Td fw={600}>
+                  {l.countedQty === undefined ? "—" : fmtQty(l.countedQty)}
+                  {queued.get(l.id) !== undefined && (
+                    <Badge ms={6} size="xs" color="orange" variant="light" data-testid={`pending-${l.ref}`}>{t("outbox.pendingValue", { qty: fmtQty(queued.get(l.id)!) })}</Badge>
+                  )}
+                </Table.Td>
                 <Table.Td>
                   {l.foundRoom ?? "—"}
                   {l.conditionFound && <Text size="xs" c="dimmed">{l.conditionFound}</Text>}
@@ -258,6 +267,7 @@ function LinesTab({ schoolId, session, onCounted }: { schoolId: string; session:
 function CountModal({ schoolId, session, target, onClose, onDone }: { schoolId: string; session: InventorySession; target: { line?: InventoryLine; qrToken?: string }; onClose: () => void; onDone: () => unknown }) {
   const { t } = useI18n();
   const places = usePlaces();
+  const outbox = useOutbox();
   const opId = useMemo(newOpId, []);
   const l = target.line;
   const [qty, setQty] = useState<number | "">(l ? (l.countedQty ?? l.expectedQty) : 1);
@@ -269,13 +279,22 @@ function CountModal({ schoolId, session, target, onClose, onDone }: { schoolId: 
   const save = async () => {
     if (qty === "" || qty < 0) return setError(t("errors.nonNegative"));
     setBusy(true);
+    const body = { lineId: l?.id ?? "", qrToken: target.qrToken ?? "", countedQty: Number(qty), foundRoomId: room ?? "", conditionFound: condition, notes, clientOpId: opId };
+    // دون اتصال: تُحفظ في الطابور المحلي وتُرسل تلقائياً عند عودة الشبكة (نفس clientOpId ← لا تكرار)
+    const queue = async () => {
+      await outbox.queue({ schoolId, clientOpId: opId, operation: "inventory.count", payload: { sessionId: session.id, ...body }, label: `${session.number} · ${l ? l.ref : target.qrToken} = ${fmtQty(Number(qty))}` });
+      notifications.show({ color: "orange", message: t("outbox.queued") });
+      onClose();
+    };
     try {
-      const r = await api.inventory!.count(schoolId, session.id, { lineId: l?.id ?? "", qrToken: target.qrToken ?? "", countedQty: Number(qty), foundRoomId: room ?? "", conditionFound: condition, notes, clientOpId: opId });
+      if (outbox.enabled && !navigator.onLine) return await queue();
+      const r = await api.inventory!.count(schoolId, session.id, body);
       notifications.show({ color: r.unexpected ? "grape" : "green", message: t(r.unexpected ? "inv.countedUnexpected" : "inv.countSaved") });
       await onDone();
       onClose();
     } catch (e) {
-      if (e instanceof ApiError && e.code === "QR_UNKNOWN") setError(t("errors.qrUnknown"));
+      if (outbox.enabled && isOfflineError(e)) await queue();
+      else if (e instanceof ApiError && e.code === "QR_UNKNOWN") setError(t("errors.qrUnknown"));
       else notifyError(t, e);
     } finally {
       setBusy(false);
@@ -284,6 +303,7 @@ function CountModal({ schoolId, session, target, onClose, onDone }: { schoolId: 
   return (
     <Modal opened onClose={onClose} title={l ? `${t("inv.count")} — ${l.name}` : t("inv.countByQr")} centered>
       <Stack data-testid="count-form">
+        {outbox.enabled && !outbox.online && <Alert color="orange" variant="light" py={6} data-testid="count-offline">{t("outbox.countOffline")}</Alert>}
         {l ? (
           <Text size="sm">
             <span dir="ltr">{l.ref}</span> · {t("inv.expected")}: {fmtQty(l.expectedQty)}

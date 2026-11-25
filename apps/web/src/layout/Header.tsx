@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { ActionIcon, Avatar, Badge, Group, Indicator, Menu, Popover, Select, Text, Tooltip } from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
-import { IconBell, IconLanguage, IconLogout, IconMenu2, IconUserCircle } from "@tabler/icons-react";
+import { ActionIcon, Avatar, Badge, Group, Menu, Select, Text, Tooltip } from "@mantine/core";
+import { IconLanguage, IconLogout, IconMenu2, IconUserCircle } from "@tabler/icons-react";
 import { useI18n } from "../i18n";
 import { useAuth } from "../auth/AuthProvider";
-import { api } from "../api";
 import { SchoolLogo } from "../components/SchoolLogo";
 import { ProfileModal } from "./ProfileModal";
+import { NotificationBell } from "./NotificationBell";
+import { OfflineIndicator } from "./OfflineIndicator";
 
 function Clock() {
   const { fmtDateTime } = useI18n();
@@ -28,8 +28,6 @@ export function Header({ onToggleMenu }: { onToggleMenu: () => void }) {
   const { user, roleLabel, schools, activeSchool, setActiveSchoolId, logout } = useAuth();
   const nav = useNavigate();
   const [profile, setProfile] = useState(false);
-  const notifQ = useQuery({ queryKey: ["notifications"], queryFn: () => api.notifications() });
-  const unread = (notifQ.data ?? []).filter((n) => !n.readAt).length;
 
   const doLogout = async () => {
     await logout();
@@ -64,23 +62,8 @@ export function Header({ onToggleMenu }: { onToggleMenu: () => void }) {
       )}
       <div className="flex-1" />
       <Clock />
-      <Popover width={300} position="bottom-end" shadow="md">
-        <Popover.Target>
-          <Indicator disabled={unread === 0} label={unread} size={16} color="red">
-            <ActionIcon variant="default" size="lg" aria-label={t("header.notifications")}>
-              <IconBell size={20} />
-            </ActionIcon>
-          </Indicator>
-        </Popover.Target>
-        <Popover.Dropdown>
-          <Text fw={700} mb={6}>{t("header.notifications")}</Text>
-          {(notifQ.data ?? []).length === 0 ? (
-            <Text size="sm" c="dimmed">{t("header.noNotifications")}</Text>
-          ) : (
-            notifQ.data!.map((n) => <Text key={n.id} size="sm">{t(n.titleKey)}</Text>)
-          )}
-        </Popover.Dropdown>
-      </Popover>
+      <OfflineIndicator />
+      <NotificationBell />
       <Menu position="bottom-end" width={230} shadow="md">
         <Menu.Target>
           <button className="flex items-center gap-2 bg-transparent border-0 cursor-pointer p-1 rounded-lg hover:bg-[#f4f6fa]" data-testid="user-menu">

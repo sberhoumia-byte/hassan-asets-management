@@ -1,6 +1,6 @@
 import { Controller, Get, Param, ParseUUIDPipe, Query } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
-import { CurrentUser, Perm, type AuthUser } from "../common/context";
+import { Perm } from "../common/context";
 import { DashboardService } from "./dashboard.service";
 
 @ApiTags("dashboard")
@@ -30,10 +30,5 @@ export class DashboardController {
   @Get("schools/:schoolId/dashboard/activity")
   activity(@Param("schoolId", ParseUUIDPipe) schoolId: string, @Query("limit") limit?: string) {
     return this.d.activity(schoolId, Number(limit) || 8);
-  }
-
-  @Get("notifications")
-  notifications(@CurrentUser() u: AuthUser) {
-    return this.d.notifications(u.id);
   }
 }

@@ -41,6 +41,10 @@ import { PurchaseOrderPage } from "./pages/purchasing/PurchaseOrderPage";
 import { ReportsPage } from "./pages/reports/ReportsPage";
 import { ImportPage } from "./pages/imports/ImportPage";
 import { DocumentsPage } from "./pages/documents/DocumentsPage";
+import { FloorPlanPage } from "./pages/floorplan/FloorPlanPage";
+import { OutboxProvider } from "./offline/OutboxProvider";
+import { NotificationSettingsPage } from "./pages/settings/NotificationSettingsPage";
+import { AuditLogPage } from "./pages/settings/AuditLogPage";
 import { ApprovalWorkflowsPage } from "./pages/settings/ApprovalWorkflowsPage";
 
 const queryClient = new QueryClient({
@@ -86,6 +90,7 @@ export function App() {
               <Notifications position="top-center" />
               <HashRouter>
                 <AuthProvider>
+                  <OutboxProvider>
                   <Routes>
                     <Route path="/setup" element={<Gate area="setup"><SetupPage /></Gate>} />
                     <Route path="/login" element={<Gate area="login"><LoginPage /></Gate>} />
@@ -113,6 +118,7 @@ export function App() {
                       <Route path="reports" element={<ReportsPage />} />
                       <Route path="imports" element={<ImportPage />} />
                       <Route path="documents" element={<DocumentsPage />} />
+                      <Route path="floorplan" element={<FloorPlanPage />} />
                       <Route path="scan/:token" element={<ScanPage />} />
                       <Route path="settings" element={<SettingsLayout />}>
                         <Route index element={<Navigate to="school" replace />} />
@@ -123,10 +129,13 @@ export function App() {
                         <Route path="catalog" element={<CatalogPage />} />
                         <Route path="staff" element={<StaffPage />} />
                         <Route path="workflows" element={<ApprovalWorkflowsPage />} />
+                        <Route path="notifications" element={<NotificationSettingsPage />} />
+                        <Route path="audit" element={<AuditLogPage />} />
                       </Route>
                       <Route path="*" element={<NotFoundPage />} />
                     </Route>
                   </Routes>
+                  </OutboxProvider>
                 </AuthProvider>
               </HashRouter>
             </ModalsProvider>

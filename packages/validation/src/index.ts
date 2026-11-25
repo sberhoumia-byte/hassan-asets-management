@@ -664,3 +664,63 @@ export const documentCreateSchema = z.intersection(documentMetaSchema, z.object(
 export type DocumentCreateInput = z.infer<typeof documentCreateSchema>;
 export const documentVersionSchema = z.object({ ...fileBody, changeNote: req(z.string()).max(300, "errors.tooLong") });
 export type DocumentVersionInput = z.infer<typeof documentVersionSchema>;
+
+// =====================================================================
+// المرحلة 8: المخطط التفاعلي — الإحداثيات نسبية (0..1) من عرض/ارتفاع المخطط
+// =====================================================================
+export const FLOORPLAN_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+const rel = z.number().min(0, "errors.invalidChoice").max(1, "errors.invalidChoice");
+const size = z.number().gt(0, "errors.invalidChoice").max(1, "errors.invalidChoice");
+export const floorPlanShapeSchema = z
+  .object({
+    kind: z.enum(["RECTANGLE", "POLYGON", "CIRCLE", "MARKER"]),
+    geometry: z.union([
+      z.object({ x: rel, y: rel, w: size, h: size }).strict(),
+      z.object({ x: rel, y: rel, r: size }).strict(),
+      z.object({ points: z.array(rel).min(6).max(200) }).strict(),
+      z.object({ x: rel, y: rel }).strict(),
+    ]),
+    label: z.string().trim().max(80, "errors.tooLong").optional().or(z.literal("")),
+    roomId: z.string().uuid("errors.invalidChoice").optional().or(z.literal("")),
+    facilityId: z.string().uuid("errors.invalidChoice").optional().or(z.literal("")),
+  })
+  .refine(
+    (s) => {
+      const g = s.geometry as Record<string, unknown>;
+      if (s.kind === "RECTANGLE") return "w" in g && "h" in g;
+      if (s.kind === "CIRCLE") return "r" in g;
+      if (s.kind === "POLYGON") return "points" in g && (g.points as number[]).length % 2 === 0;
+      return "x" in g && !("w" in g) && !("r" in g);
+    },
+    { path: ["geometry"], message: "errors.invalidChoice" },
+  )
+  .refine((s) => !(s.roomId && s.facilityId), { path: ["facilityId"], message: "errors.invalidChoice" });
+export type FloorPlanShapeInput = z.infer<typeof floorPlanShapeSchema>;
+export const floorPlanShapesSchema = z.object({ shapes: z.array(floorPlanShapeSchema).max(500, "errors.tooLong") });
+export const floorPlanSchema = z.object({
+  name: req(z.string()).max(120, "errors.tooLong"),
+  // data URL لصورة PNG/JPEG/WEBP؛ "" يزيل الخلفية؛ غيابه يُبقيها
+  background: z.string().max(7_200_000, "errors.fileTooLarge").optional(),
+});
+export type FloorPlanInput = z.infer<typeof floorPlanSchema>;
+
+// =====================================================================
+// المرحلة 8: المزامنة دون اتصال (Outbox)
+// =====================================================================
+export const SYNC_OPERATIONS = ["stock.in", "stock.out", "inventory.count"] as const;
+export type SyncOperationName = (typeof SYNC_OPERATIONS)[number];
+export const syncBatchSchema = z.object({
+  deviceId: req(z.string()).max(80, "errors.tooLong"),
+  operations: z
+    .array(
+      z.object({
+        clientOpId: z.string().uuid("errors.invalidChoice"),
+        operation: z.enum(SYNC_OPERATIONS),
+        payload: z.record(z.string(), z.unknown()),
+        clientCreatedAt: z.string().datetime({ offset: true, message: "errors.invalidChoice" }),
+      }),
+    )
+    .min(1, "errors.required")
+    .max(100, "errors.tooLong"),
+});
+export type SyncBatchInput = z.infer<typeof syncBatchSchema>;

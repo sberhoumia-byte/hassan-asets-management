@@ -16,6 +16,7 @@ import type { AssetsApi, CatalogApi, LoansApi, ResourcesApi, SpacesApi, StaffApi
 import type { CustodyApi, InventoryApi, MaintenanceApi, PurchasingApi } from "./phase6";
 import type { ReportsApi } from "./phase7";
 import type { DocumentsApi, ImportsApi } from "./phase7b";
+import type { AuditApi, FloorPlanApi, NotificationsApi, SyncApi } from "./phase8";
 
 export type RoleCode =
   | "ADMIN"
@@ -186,4 +187,8 @@ export interface Api {
   readonly reports?: ReportsApi;
   readonly imports?: ImportsApi;
   readonly documents?: DocumentsApi;
+  readonly notify?: NotificationsApi;
+  readonly audit?: AuditApi;
+  readonly floorplan?: FloorPlanApi;
+  readonly sync?: SyncApi;
 }

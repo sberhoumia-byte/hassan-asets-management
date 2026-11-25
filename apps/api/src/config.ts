@@ -15,6 +15,8 @@ const schema = z.object({
   SETUP_TOKEN: z.string().optional(),
   /** حد محاولات الدخول لكل عنوان IP في الدقيقة (حماية من التخمين، إضافة إلى قفل الحساب). */
   LOGIN_RATE_LIMIT: z.coerce.number().int().positive().default(10),
+  /** دورية فحص التنبيهات المجدولة بالدقائق (0 يعطلها). */
+  NOTIFY_INTERVAL_MINUTES: z.preprocess((v) => (v === "" ? undefined : v), z.coerce.number().int().min(0).max(1440).default(15)), // قيمة فارغة = الافتراضي، لا 0
   /** مسار Chromium لتوليد PDF (إن لم يُحدد يُستعمل متصفح Playwright المثبت). */
   CHROMIUM_PATH: z.string().optional(),
   /** تعطيل عزل Chromium (مطلوب أحياناً داخل الحاويات). */

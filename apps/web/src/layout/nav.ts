@@ -43,7 +43,7 @@ export const NAV: NavItem[] = [
   { key: "purchasing", icon: IconTruckDelivery, to: "/purchasing", perm: "purchasing.view", serverOnly: true },
   { key: "custody", icon: IconUserShare, to: "/custody", perm: "custody.view", serverOnly: true },
   { key: "suppliers", icon: IconAddressBook, to: "/suppliers", perm: "suppliers.view", serverOnly: true },
-  { key: "floorplan", icon: IconMap2, phase: 8 },
+  { key: "floorplan", icon: IconMap2, to: "/floorplan", perm: "floorplan.view", serverOnly: true },
   { key: "excel", icon: IconFileSpreadsheet, to: "/imports", perm: "imports.view", serverOnly: true },
   { key: "documents", icon: IconArchive, to: "/documents", perm: "documents.view", serverOnly: true },
   { key: "reports", icon: IconChartBar, to: "/reports", perm: "reports.view", serverOnly: true },
@@ -60,4 +60,6 @@ export const SETTINGS_PAGES = [
   { key: "catalog", to: "/settings/catalog" },
   { key: "staff", to: "/settings/staff" },
   { key: "workflows", to: "/settings/workflows" },
+  { key: "notifications", to: "/settings/notifications" },
+  { key: "audit", to: "/settings/audit" },
 ] as const;

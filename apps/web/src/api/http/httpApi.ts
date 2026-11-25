@@ -32,6 +32,8 @@ import type { GeneratedDownload, ReportsApi } from "../phase7";
 import { HttpReportsApi } from "./phase7Http";
 import type { DocumentsApi, ImportsApi } from "../phase7b";
 import { HttpDocumentsApi, HttpImportsApi } from "./phase7bHttp";
+import type { AuditApi, FloorPlanApi, NotificationsApi, SyncApi } from "../phase8";
+import { HttpAuditApi, HttpFloorPlanApi, HttpNotificationsApi, HttpSyncApi } from "./phase8Http";
 
 type Method = "GET" | "POST" | "PUT" | "DELETE";
 interface Opts {
@@ -72,6 +74,10 @@ export class HttpApi implements Api {
   readonly reports: ReportsApi;
   readonly imports: ImportsApi;
   readonly documents: DocumentsApi;
+  readonly notify: NotificationsApi;
+  readonly audit: AuditApi;
+  readonly floorplan: FloorPlanApi;
+  readonly sync: SyncApi;
 
   constructor(private base = "/api/v1") {
     this.users = new HttpUsersApi(this);
@@ -90,6 +96,10 @@ export class HttpApi implements Api {
     this.reports = new HttpReportsApi(this);
     this.imports = new HttpImportsApi(this);
     this.documents = new HttpDocumentsApi(this);
+    this.notify = new HttpNotificationsApi(this);
+    this.audit = new HttpAuditApi(this);
+    this.floorplan = new HttpFloorPlanApi(this);
+    this.sync = new HttpSyncApi(this);
   }
 
   /** طلب يعيد ملفاً (PDF/Excel) مع رقم الأرشيف من الترويسات؛ الأخطاء تبقى JSON كالمعتاد. */
@@ -259,8 +269,9 @@ export class HttpApi implements Api {
   recentActivity(schoolId: string, limit = 8) {
     return this.request<ActivityEntry[]>("GET", `/schools/${schoolId}/dashboard/activity`, { query: { limit } });
   }
-  notifications() {
-    return this.request<NotificationItem[]>("GET", "/notifications");
+  async notifications(): Promise<NotificationItem[]> {
+    const r = await this.notify.list();
+    return r.items.map((n) => ({ id: n.id, at: n.at, titleKey: n.titleKey, readAt: n.readAt }));
   }
 }
 

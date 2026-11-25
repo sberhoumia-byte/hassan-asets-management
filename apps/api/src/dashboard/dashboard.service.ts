@@ -244,9 +244,4 @@ export class DashboardService {
       };
     });
   }
-
-  async notifications(userId: string) {
-    const rows = await this.prisma.notification.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 50 });
-    return rows.map((n) => ({ id: n.id, at: n.createdAt.toISOString(), titleKey: n.title, readAt: n.readAt?.toISOString() }));
-  }
 }

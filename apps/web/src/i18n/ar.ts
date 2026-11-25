@@ -2,6 +2,7 @@ import { arPhase4 } from "./phase4.ar";
 import { arPhase5 } from "./phase5.ar";
 import { arPhase6 } from "./phase6.ar";
 import { arPhase7 } from "./phase7.ar";
+import { arPhase8 } from "./phase8.ar";
 
 export const ar: Record<string, string> = {
   "app.shortName": "التدبير المادي",
@@ -373,4 +374,5 @@ export const ar: Record<string, string> = {
   ...arPhase5,
   ...arPhase6,
   ...arPhase7,
+  ...arPhase8,
 };
