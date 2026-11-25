@@ -201,19 +201,52 @@
 
 التأخير = عدد الأيام (بالتقريب للأعلى) بعد نهاية يوم الإرجاع المتوقع؛ للإعارة المرجعة يُحسب حتى آخر إرجاع. **مؤجل**: `POST /loans/:id/signature` (التوقيع الإلكتروني)، `classId`، `receipt.pdf` من الخادم (المرحلة 7؛ الوصل الآن صفحة A4 في الواجهة `#/loans/:id/receipt`).
 
-### 3.10 الجرد
-`POST /inventory-sessions` (نوع، تواريخ، فضاءات، مكلفون) → `POST /:id/open` (يأخذ لقطة النظري) → `POST /:id/counts` (سطر عدّ، يقبل `Idempotency-Key`، يدعم QR) → `GET /:id/discrepancies` → `POST /:id/complete` → `POST /:id/validate` 🔒 → `POST /:id/close` → `GET /:id/report.pdf` (المحضر).
+### 3.10 الجرد ✅
+| الطريقة | المسار | الوصف |
+|---|---|---|
+| GET | `/inventory-sessions` · `/inventory-sessions/:id` | 🔒 `inventory.view` مع `stats {lines, counted, withIssue}` |
+| GET | `/inventory-sessions/assignable-users` | 🔒 `inventory.create` المستخدمون النشطون في المؤسسة |
+| POST/PUT | `/inventory-sessions[/:id]` | `{type: ANNUAL\|PERIODIC\|EXCEPTIONAL, startDate, endDate, includesStock, roomIds[], assigneeIds[]}` — بعد الفتح → `422 SESSION_NOT_DRAFT` |
+| POST | `/:id/open` | يأخذ اللقطة النظرية (ثابتة بعدها) |
+| POST | `/:id/counts` | `{lineId \| qrToken, countedQty, foundRoomId?, conditionFound?, notes?, clientOpId?}` — خارج «مفتوحة» → `422 SESSION_NOT_OPEN`؛ غير مكلَّف → `403`؛ رمز مجهول → `422 QR_UNKNOWN` |
+| GET | `/:id/lines?filter=pending\|counted\|issues&roomId=&q=` · `/:id/discrepancies` | الأسطر بفروقها، والملخص حسب النوع |
+| POST | `/:id/complete` · `/:id/reopen` · `/:id/validate` 🔒 `inventory.validate` `{reportNotes}` · `/:id/close` 🔒 `inventory.validate` · `/:id/archive` 🔒 `inventory.archive` | انتقال غير مسموح → `422 INVALID_TRANSITION {from, to}` |
 
-### 3.11 الصيانة
-`/maintenance/requests` (CRUD، فلترة بالاستعجال والحالة)، `POST /:id/transition` `{to: MaintenanceStatus}` مع التحقق من الانتقالات المسموحة، `POST /:id/records` (تدخل)، `/maintenance/schedules` (الوقائية).
+المحضر صفحة A4 في الواجهة `#/inventory/:id/report`؛ `report.pdf` من الخادم: المرحلة 7.
 
-### 3.12 الطلبيات والاقتناء
-`/purchase-orders` CRUD، `POST /:id/submit` (يختار مسار المصادقة حسب مصدر التمويل)، `POST /:id/approvals/:stepId` `{decision, comment}`، `POST /:id/deliveries` (التسلم + المطابقة)، `POST /deliveries/:id/post-to-stock`، `POST /deliveries/:id/post-to-assets`، `/invoices`، `/approval-workflows` 🔒 `settings.manage`.
+### 3.11 الصيانة ✅
+| الطريقة | المسار | الوصف |
+|---|---|---|
+| GET | `/maintenance/requests?q=&status=&urgency=&open=1&targetType=&page=` · `/maintenance/requests/:id` | 🔒 `maintenance.view` (التفاصيل مع الصورة والتدخلات والتكلفة) |
+| POST | `/maintenance/requests` | 🔒 `maintenance.create` `{targetType: asset\|room\|facility\|resourceUnit, targetId, type, damageTypeId?, description, urgency, assigneeId?, photoDataUrl?, clientOpId?}` |
+| PUT | `/maintenance/requests/:id` | الوصف/النوع/الاستعجال/المكلف — مغلق → `422 MAINTENANCE_CLOSED` |
+| POST | `/maintenance/requests/:id/transition` | `{to, note?}` — غير مسموح → `422 INVALID_TRANSITION`؛ إغلاق دون إصلاح بلا ملاحظة → `errors.closeNeedsNote` |
+| POST | `/maintenance/requests/:id/records` | `{outcome, contractor?, cost?, interventionReport?, startedAt?, repairedAt?, invoice?}` — خارج «قيد الدراسة/الإصلاح» → `422 RECORD_NOT_ALLOWED`؛ فاتورة مكررة → `409 DUPLICATE_INVOICE` |
+| GET/POST/PUT | `/maintenance/schedules[/:id]` · POST `/maintenance/schedules/:id/generate` | الوقائية مع `dueSoon/overdue`؛ جدولة معطلة → `422 SCHEDULE_INACTIVE` |
+| GET | `/maintenance/assignees` | المستخدمون الممكن تكليفهم |
 
-### 3.13 العهدة
-`GET /custody?assetId=&staffId=`، `POST /custody` `{action, assetId, toStaffId?, toRoomId?, signatures?}` (يحدّث موقع/مسؤول الممتلك ذرياً)، `GET /custody/:id/report.pdf` (محضر التسليم).
+### 3.12 الطلبيات والاقتناء ✅
+| الطريقة | المسار | الوصف |
+|---|---|---|
+| GET/POST/PUT | `/approval-workflows[/:id]` | العرض 🔒 `purchasing.view`، التعديل 🔒 `settings.manage` `{name, fundingSourceId?, managingBody?, isActive, steps[{name, requiredRoleCode?}]}` — مستعمل → `422 WORKFLOW_IN_USE` |
+| GET | `/purchase-orders?status=open\|<status>&q=&page=` · `/purchase-orders/:id` | 🔒 `purchasing.view` مع الأسطر والمصادقات والتسلمات والفواتير |
+| POST/PUT | `/purchase-orders[/:id]` | `{title, needDescription?, fundingSourceId?, budgetLine?, supplierId?, items[{description, quantity, unitId?, estimatedUnitCost?, targetKind: ASSET\|STOCK\|RESOURCE, inventoryItemId?}]}` — بعد الإرسال → `422 PO_LOCKED` |
+| POST | `/:id/submit` | `{workflowId?}` تلقائي حسب مصدر التمويل ثم الافتراضي — `422 NO_WORKFLOW` / `422 WORKFLOW_AMBIGUOUS {count}` |
+| POST | `/:id/approvals/:stepId` | `{decision, comment?}` بالترتيب (`422 STEP_OUT_OF_ORDER`)، بالدور المطلوب أو `purchasing.approve` (`403`)، الرفض بتعليل |
+| POST | `/:id/order` · `/:id/cancel` 🔒 `purchasing.cancel` `{reason}` | |
+| POST | `/:id/deliveries` | `{receivedAt, conformity, conformityNotes?, items[{purchaseOrderItemId, quantityReceived, quantityAccepted}], clientOpId?}` — `422 DELIVERY_EXCEEDS {item, remaining, requested}` |
+| POST | `/deliveries/post` | `{deliveryItemId, warehouseId? \| categoryId + trackingMode + roomId?, unitCost?}` مرة واحدة (`422 ALREADY_POSTED`) |
+| POST | `/:id/invoices` · `/:id/close` | الفاتورة تتطلب مورداً (`422 NO_SUPPLIER`)؛ الإغلاق → `422 UNPOSTED_ITEMS {count}` |
 
-### 3.14 الموردون ✅ (الطلبيات والفواتير: المرحلة 6)
+### 3.13 العهدة ✅
+| الطريقة | المسار | الوصف |
+|---|---|---|
+| GET | `/custody?assetId=&staffId=&action=&q=&page=` · `/custody/:id` | 🔒 `custody.view` |
+| POST | `/custody` | 🔒 `custody.create` `{action: HANDOVER\|ASSIGNMENT\|RELOCATION\|TRANSFER\|RETURN, assetId, toStaffId?, toRoomId?, occurredAt?, notes?, clientOpId?}` — `422 SAME_CUSTODIAN / NO_CURRENT_CUSTODIAN / SAME_ROOM / ASSET_ARCHIVED`؛ يحدّث المسؤول والفضاء ذرياً ويظهر في سجل الممتلك |
+
+المحضر صفحة A4 `#/custody/:id/report`؛ التوقيع الإلكتروني و`report.pdf` من الخادم: مؤجلان.
+
+### 3.14 الموردون ✅ (الطلبيات والفواتير: 3.12)
 `GET /schools/:schoolId/suppliers?q=&archived=1` 🔒 `suppliers.view` (مع عدد الاستعمالات)، `POST`/`PUT` 🔒 `suppliers.create`/`update` (ICE مكرر → `409 DUPLICATE_ICE`)، `POST /:id/archive` و`/:id/restore` 🔒 `suppliers.archive` — لا حذف. `GET /suppliers/:id/orders` و`/invoices`: المرحلة 6.
 
 ### 3.15 المخطط التفاعلي

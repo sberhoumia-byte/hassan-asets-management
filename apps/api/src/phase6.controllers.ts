@@ -146,6 +146,11 @@ export class InventoryController {
   list(@SID() sid: P) {
     return this.s.list(sid);
   }
+  @Perm("inventory.create")
+  @Get("assignable-users")
+  assignable(@SID() sid: P) {
+    return this.s.assignable(sid);
+  }
   @Perm("inventory.view")
   @Get(":id")
   get(@SID() sid: P, @ID() id: P) {

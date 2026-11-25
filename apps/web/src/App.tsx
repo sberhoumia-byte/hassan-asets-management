@@ -30,6 +30,15 @@ import { FacilitiesPage } from "./pages/spaces/FacilitiesPage";
 import { ResourcesPage } from "./pages/resources/ResourcesPage";
 import { LoansPage } from "./pages/loans/LoansPage";
 import { LoanReceiptPage } from "./pages/loans/LoanReceiptPage";
+import { MaintenancePage } from "./pages/maintenance/MaintenancePage";
+import { CustodyPage } from "./pages/custody/CustodyPage";
+import { CustodyReportPage } from "./pages/custody/CustodyReportPage";
+import { InventoryPage } from "./pages/inventory/InventoryPage";
+import { InventorySessionPage } from "./pages/inventory/InventorySessionPage";
+import { InventoryReportPage } from "./pages/inventory/InventoryReportPage";
+import { PurchasingPage } from "./pages/purchasing/PurchasingPage";
+import { PurchaseOrderPage } from "./pages/purchasing/PurchaseOrderPage";
+import { ApprovalWorkflowsPage } from "./pages/settings/ApprovalWorkflowsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
@@ -90,6 +99,14 @@ export function App() {
                       <Route path="resources/:id" element={<ResourcesPage />} />
                       <Route path="loans" element={<LoansPage />} />
                       <Route path="loans/:id/receipt" element={<LoanReceiptPage />} />
+                      <Route path="maintenance" element={<MaintenancePage />} />
+                      <Route path="custody" element={<CustodyPage />} />
+                      <Route path="custody/:id/report" element={<CustodyReportPage />} />
+                      <Route path="inventory" element={<InventoryPage />} />
+                      <Route path="inventory/:id" element={<InventorySessionPage />} />
+                      <Route path="inventory/:id/report" element={<InventoryReportPage />} />
+                      <Route path="purchasing" element={<PurchasingPage />} />
+                      <Route path="purchasing/:id" element={<PurchaseOrderPage />} />
                       <Route path="scan/:token" element={<ScanPage />} />
                       <Route path="settings" element={<SettingsLayout />}>
                         <Route index element={<Navigate to="school" replace />} />
@@ -99,6 +116,7 @@ export function App() {
                         <Route path="print-preview" element={<PrintPreviewPage />} />
                         <Route path="catalog" element={<CatalogPage />} />
                         <Route path="staff" element={<StaffPage />} />
+                        <Route path="workflows" element={<ApprovalWorkflowsPage />} />
                       </Route>
                       <Route path="*" element={<NotFoundPage />} />
                     </Route>

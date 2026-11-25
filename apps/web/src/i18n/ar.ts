@@ -1,5 +1,6 @@
 import { arPhase4 } from "./phase4.ar";
 import { arPhase5 } from "./phase5.ar";
+import { arPhase6 } from "./phase6.ar";
 
 export const ar: Record<string, string> = {
   "app.shortName": "التدبير المادي",
@@ -369,4 +370,5 @@ export const ar: Record<string, string> = {
   "setup.badToken": "رمز الإعداد غير صحيح",
   ...arPhase4,
   ...arPhase5,
+  ...arPhase6,
 };

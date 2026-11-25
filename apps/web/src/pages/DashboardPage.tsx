@@ -36,8 +36,8 @@ const QUICK: { key: string; phase: number; to?: string; perm?: string }[] = [
   { key: "addStock", phase: 4, to: "/stock", perm: "stock.create" },
   { key: "newLoan", phase: 5, to: "/loans?new=1", perm: "loans.create" },
   { key: "newReturn", phase: 5, to: "/loans", perm: "loans.update" },
-  { key: "newInventory", phase: 6 },
-  { key: "newMaintenance", phase: 6 },
+  { key: "newInventory", phase: 6, to: "/inventory?new=1", perm: "inventory.create" },
+  { key: "newMaintenance", phase: 6, to: "/maintenance?new=1", perm: "maintenance.create" },
   { key: "newReport", phase: 7 },
   { key: "importExcel", phase: 7 },
 ];
@@ -48,9 +48,9 @@ const CHARTS: { key: string; phase: number }[] = [
   { key: "stockStatus", phase: 7 },
   { key: "resourcesDistribution", phase: 7 },
   { key: "loansStatus", phase: 7 },
-  { key: "acquisitions", phase: 6 },
-  { key: "maintenance", phase: 6 },
-  { key: "inventoryResults", phase: 6 },
+  { key: "acquisitions", phase: 7 },
+  { key: "maintenance", phase: 7 },
+  { key: "inventoryResults", phase: 7 },
 ];
 
 export function DashboardPage() {

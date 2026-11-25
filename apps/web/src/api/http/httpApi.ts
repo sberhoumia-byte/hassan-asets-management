@@ -26,6 +26,8 @@ import {
 } from "../types";
 import type { AssetsApi, CatalogApi, LoansApi, ResourcesApi, SpacesApi, StaffApi, StockApi, SuppliersApi } from "../phase4";
 import { HttpAssetsApi, HttpCatalogApi, HttpLoansApi, HttpResourcesApi, HttpSpacesApi, HttpStaffApi, HttpStockApi, HttpSuppliersApi } from "./phase4Http";
+import type { CustodyApi, InventoryApi, MaintenanceApi, PurchasingApi } from "../phase6";
+import { HttpCustodyApi, HttpInventoryApi, HttpMaintenanceApi, HttpPurchasingApi } from "./phase6Http";
 
 type Method = "GET" | "POST" | "PUT" | "DELETE";
 interface Opts {
@@ -51,6 +53,10 @@ export class HttpApi implements Api {
   readonly staff: StaffApi;
   readonly resources: ResourcesApi;
   readonly loans: LoansApi;
+  readonly maintenance: MaintenanceApi;
+  readonly custody: CustodyApi;
+  readonly inventory: InventoryApi;
+  readonly purchasing: PurchasingApi;
 
   constructor(private base = "/api/v1") {
     this.users = new HttpUsersApi(this);
@@ -62,6 +68,10 @@ export class HttpApi implements Api {
     this.staff = new HttpStaffApi(this);
     this.resources = new HttpResourcesApi(this);
     this.loans = new HttpLoansApi(this);
+    this.maintenance = new HttpMaintenanceApi(this);
+    this.custody = new HttpCustodyApi(this);
+    this.inventory = new HttpInventoryApi(this);
+    this.purchasing = new HttpPurchasingApi(this);
   }
 
   async request<T>(method: Method, path: string, o: Opts = {}): Promise<T> {

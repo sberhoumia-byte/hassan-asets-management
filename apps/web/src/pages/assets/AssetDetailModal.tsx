@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Alert, Badge, Button, Center, Grid, Group, Image, Loader, Modal, Stack, Table, Tabs, Text, Textarea, Timeline } from "@mantine/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { IconArchive, IconDownload, IconEdit } from "@tabler/icons-react";
+import { IconArchive, IconDownload, IconEdit, IconTool, IconUserShare } from "@tabler/icons-react";
+import { useNavigate } from "react-router";
 import QRCode from "qrcode";
 import { api, ApiError, type Asset } from "../../api";
 import { useAuth } from "../../auth/AuthProvider";
@@ -22,6 +23,7 @@ export function AssetDetailModal({ schoolId, id, onClose, onEdit }: { schoolId: 
   const cat = useCatalog();
   const q = useQuery({ queryKey: ["asset", schoolId, id], queryFn: () => api.assets!.get(schoolId, id) });
   const [archiving, setArchiving] = useState(false);
+  const nav = useNavigate();
   const a = q.data;
 
   return (
@@ -69,6 +71,16 @@ export function AssetDetailModal({ schoolId, id, onClose, onEdit }: { schoolId: 
               </Grid.Col>
             </Grid>
             <Group justify="flex-end" mt="md">
+              {!a.archivedAt && can("maintenance.create") && api.maintenance && (
+                <Button variant="light" color="orange" leftSection={<IconTool size={16} />} onClick={() => nav(`/maintenance?new=1&targetType=asset&targetId=${a.id}`)} data-testid="asset-report-damage">
+                  {t("assets.reportDamage")}
+                </Button>
+              )}
+              {!a.archivedAt && can("custody.create") && api.custody && (
+                <Button variant="light" leftSection={<IconUserShare size={16} />} onClick={() => nav(`/custody?new=1&asset=${a.id}`)} data-testid="asset-custody">
+                  {t("assets.custodyOp")}
+                </Button>
+              )}
               {!a.archivedAt && can("assets.archive") && (
                 <Button variant="light" color="red" leftSection={<IconArchive size={16} />} onClick={() => setArchiving(true)} data-testid="asset-archive">
                   {t("assets.archive")}

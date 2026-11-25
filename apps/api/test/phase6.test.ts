@@ -179,7 +179,7 @@ describe("العهدة: التسليم والنقل والتحويل والإر�
     expect(r.body.number).toBe(`CU-${year}-00001`);
     expect((await assetOf(s.asset)).responsibleStaffId).toBe(s.teacher);
     const hist = (await get(`/assets/${s.asset}/history`)).body as { action: string }[];
-    expect(hist[0].action).toBe("CUSTODY_ASSIGNMENT");
+    expect(hist[0]!.action).toBe("CUSTODY_ASSIGNMENT");
     expect((await post("/custody", { action: "ASSIGNMENT", assetId: s.asset, toStaffId: s.teacher })).body.error.code).toBe("SAME_CUSTODIAN");
     // الحقول المطلوبة حسب نوع العملية
     expect((await post("/custody", { action: "HANDOVER", assetId: s.asset })).body.error.details.fields.toStaffId).toBe("errors.required");

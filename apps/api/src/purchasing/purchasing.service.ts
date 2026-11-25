@@ -20,9 +20,9 @@ const day = (s: string | null | undefined) => (s ? new Date(`${s}T00:00:00Z`) : 
 const poInclude = {
   supplier: { select: { id: true, name: true } },
   workflow: { select: { id: true, name: true } },
-  items: { orderBy: { id: "asc" as const }, include: { deliveryItems: { select: { quantityAccepted: true } } } },
+  items: { orderBy: { lineNo: "asc" as const }, include: { deliveryItems: { select: { quantityAccepted: true } } } },
   approvals: { include: { step: true }, orderBy: { step: { stepOrder: "asc" as const } } },
-  deliveries: { orderBy: { receivedAt: "asc" as const }, include: { items: true } },
+  deliveries: { orderBy: [{ receivedAt: "asc" as const }, { number: "asc" as const }], include: { items: { orderBy: { purchaseOrderItem: { lineNo: "asc" as const } } } } },
   invoices: { orderBy: { invoiceDate: "asc" as const } },
 } satisfies Prisma.PurchaseOrderInclude;
 type PoRow = Prisma.PurchaseOrderGetPayload<{ include: typeof poInclude }>;
@@ -171,7 +171,8 @@ export class PurchasingService {
   }
 
   private itemsData(i: PurchaseOrderInput) {
-    return i.items.map((it) => ({
+    return i.items.map((it, k) => ({
+      lineNo: k + 1,
       description: it.description.trim(),
       quantity: it.quantity,
       unitId: it.unitId || null,

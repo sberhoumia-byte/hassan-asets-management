@@ -159,6 +159,11 @@ export class InventoryService {
     };
   }
 
+  /** المستخدمون الذين يمكن تكليفهم بالعد: النشطون ذوو دور في المؤسسة. */
+  async assignable(schoolId: string) {
+    return this.prisma.user.findMany({ where: { status: "ACTIVE", roles: { some: { schoolId } } }, select: { id: true, fullNameAr: true }, orderBy: { fullNameAr: "asc" } });
+  }
+
   private async assertUsers(schoolId: string, ids: string[]) {
     if (!ids.length) return;
     const n = await this.prisma.user.count({ where: { id: { in: ids }, status: "ACTIVE", roles: { some: { schoolId } } } });

@@ -38,10 +38,10 @@ export const NAV: NavItem[] = [
   { key: "facilities", icon: IconBallFootball, to: "/facilities", perm: "facilities.view", serverOnly: true },
   { key: "resources", icon: IconBook2, to: "/resources", perm: "resources.view", serverOnly: true },
   { key: "loans", icon: IconArrowsExchange, to: "/loans", perm: "loans.view", serverOnly: true },
-  { key: "inventory", icon: IconClipboardCheck, phase: 6 },
-  { key: "maintenance", icon: IconTool, phase: 6 },
-  { key: "purchasing", icon: IconTruckDelivery, phase: 6 },
-  { key: "custody", icon: IconUserShare, phase: 6 },
+  { key: "inventory", icon: IconClipboardCheck, to: "/inventory", perm: "inventory.view", serverOnly: true },
+  { key: "maintenance", icon: IconTool, to: "/maintenance", perm: "maintenance.view", serverOnly: true },
+  { key: "purchasing", icon: IconTruckDelivery, to: "/purchasing", perm: "purchasing.view", serverOnly: true },
+  { key: "custody", icon: IconUserShare, to: "/custody", perm: "custody.view", serverOnly: true },
   { key: "suppliers", icon: IconAddressBook, to: "/suppliers", perm: "suppliers.view", serverOnly: true },
   { key: "floorplan", icon: IconMap2, phase: 8 },
   { key: "excel", icon: IconFileSpreadsheet, phase: 7 },
@@ -51,7 +51,7 @@ export const NAV: NavItem[] = [
   { key: "settings", icon: IconSettings, to: "/settings" },
 ];
 
-/** صفحات قسم الإعدادات (المرجعيات في المرحلة 4، الموظفون في المرحلة 5). */
+/** صفحات قسم الإعدادات (المرجعيات في المرحلة 4، الموظفون في المرحلة 5، مسارات المصادقة في المرحلة 6). */
 export const SETTINGS_PAGES = [
   { key: "schoolInfo", to: "/settings/school" },
   { key: "hierarchy", to: "/settings/hierarchy" },
@@ -59,4 +59,5 @@ export const SETTINGS_PAGES = [
   { key: "printPreview", to: "/settings/print-preview" },
   { key: "catalog", to: "/settings/catalog" },
   { key: "staff", to: "/settings/staff" },
+  { key: "workflows", to: "/settings/workflows" },
 ] as const;
