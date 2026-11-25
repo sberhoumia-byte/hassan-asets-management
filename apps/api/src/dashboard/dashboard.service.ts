@@ -72,19 +72,21 @@ export class DashboardService {
             FROM inventory_items i LEFT JOIN stock_balances b ON b."itemId" = i.id
             WHERE i."schoolId" = ${schoolId}::uuid AND i."isActive" GROUP BY i.id) t`;
     // نفس قاعدة StockService.levelOf
-    const [overdue, urgent, damaged] = await Promise.all([
+    const [overdue, urgent, damaged, damagedUnits] = await Promise.all([
       p.resourceLoan.count({ where: { schoolId, status: { in: ["ACTIVE", "PARTIALLY_RETURNED"] }, dueAt: { lt: new Date() } } }),
       p.maintenanceRequest.count({
         where: { schoolId, urgency: { in: ["HIGH", "CRITICAL"] }, status: { notIn: ["REPAIRED", "UNREPAIRABLE", "CLOSED"] } },
       }),
       p.educationalResource.aggregate({ where: { schoolId, archivedAt: null }, _sum: { quantityDamaged: true } }),
+      // الوحدات الفردية المعطوبة (الأصناف الكمية تُحسب من quantityDamaged أعلاه)
+      p.educationalResourceUnit.count({ where: { status: "DAMAGED", resource: { schoolId, archivedAt: null } } }),
     ]);
     const all = [
       { kind: "stockOut", count: Number(stock[0]?.out ?? 0), severity: "high" as const },
       { kind: "loansOverdue", count: overdue, severity: "high" as const },
       { kind: "maintenanceUrgent", count: urgent, severity: "high" as const },
       { kind: "stockLow", count: Number(stock[0]?.low ?? 0), severity: "medium" as const },
-      { kind: "resourcesDamaged", count: damaged._sum.quantityDamaged ?? 0, severity: "medium" as const },
+      { kind: "resourcesDamaged", count: (damaged._sum.quantityDamaged ?? 0) + damagedUnits, severity: "medium" as const },
     ];
     return all.filter((a) => a.count > 0);
   }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 import { Alert, Badge, Button, Card, Group, Pagination, SegmentedControl, Select, Table, Text, TextInput, Title } from "@mantine/core";
 import { useDebouncedValue } from "@mantine/hooks";
 import { useQuery } from "@tanstack/react-query";
@@ -35,7 +35,12 @@ function AssetsScreen({ schoolId }: { schoolId: string }) {
   const [status, setStatus] = useState<string | null>(null);
   const [archived, setArchived] = useState("active");
   const [page, setPage] = useState(1);
-  const [form, setForm] = useState<null | { asset?: Asset }>(null);
+  const [params, setParams] = useSearchParams();
+  // ?new=1 (الإجراء السريع في لوحة القيادة) يفتح نموذج الإضافة مباشرة
+  const [form, setForm] = useState<null | { asset?: Asset }>(() => (params.get("new") && can("assets.create") ? {} : null));
+  useEffect(() => {
+    if (params.get("new")) setParams({}, { replace: true });
+  }, []);
 
   useEffect(() => setPage(1), [dq, categoryId, status, archived]);
 

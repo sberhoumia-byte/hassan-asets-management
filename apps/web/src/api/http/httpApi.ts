@@ -24,8 +24,8 @@ import {
   type SessionUser,
   type UsersApi,
 } from "../types";
-import type { AssetsApi, CatalogApi, StockApi, SuppliersApi } from "../phase4";
-import { HttpAssetsApi, HttpCatalogApi, HttpStockApi, HttpSuppliersApi } from "./phase4Http";
+import type { AssetsApi, CatalogApi, LoansApi, ResourcesApi, SpacesApi, StaffApi, StockApi, SuppliersApi } from "../phase4";
+import { HttpAssetsApi, HttpCatalogApi, HttpLoansApi, HttpResourcesApi, HttpSpacesApi, HttpStaffApi, HttpStockApi, HttpSuppliersApi } from "./phase4Http";
 
 type Method = "GET" | "POST" | "PUT" | "DELETE";
 interface Opts {
@@ -47,6 +47,10 @@ export class HttpApi implements Api {
   readonly assets: AssetsApi;
   readonly stock: StockApi;
   readonly suppliers: SuppliersApi;
+  readonly spaces: SpacesApi;
+  readonly staff: StaffApi;
+  readonly resources: ResourcesApi;
+  readonly loans: LoansApi;
 
   constructor(private base = "/api/v1") {
     this.users = new HttpUsersApi(this);
@@ -54,6 +58,10 @@ export class HttpApi implements Api {
     this.assets = new HttpAssetsApi(this);
     this.stock = new HttpStockApi(this);
     this.suppliers = new HttpSuppliersApi(this);
+    this.spaces = new HttpSpacesApi(this);
+    this.staff = new HttpStaffApi(this);
+    this.resources = new HttpResourcesApi(this);
+    this.loans = new HttpLoansApi(this);
   }
 
   async request<T>(method: Method, path: string, o: Opts = {}): Promise<T> {

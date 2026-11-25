@@ -24,7 +24,7 @@ export function ScanPage() {
       .then((r) => {
         if (!alive) return;
         if (r.schoolId !== activeSchool?.id) setActiveSchoolId(r.schoolId);
-        nav(`/assets/${r.id}`, { replace: true });
+        nav(r.kind === "resourceUnit" ? `/resources/${r.id}` : `/assets/${r.id}`, { replace: true });
       })
       .catch((e) => alive && setError(e instanceof ApiError && e.code === "NOT_FOUND" ? "scan.notFound" : "errors.unexpected"));
     return () => {

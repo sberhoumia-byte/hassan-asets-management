@@ -194,6 +194,10 @@ describe("الوسائل التعليمية والإعارة", () => {
     await http.post(`${base()}/loans/${l.body.id}/returns`).set(auth(admin)).send({ quantity: 1, damaged: true, conditionIn: "POOR", notes: "عدسة مكسورة" });
     const u = (await http.get(`${base()}/resources/${s.projector}`).set(auth(admin))).body.units.find((x: { id: string }) => x.id === s.unit1);
     expect(u.status).toBe("DAMAGED");
+    // تنبيه «وسائل معطوبة» يجمع الوحدات الفردية المعطوبة والكميات المعطوبة
+    const list = (await http.get(`${base()}/resources`).set(auth(admin))).body as { damaged: number }[];
+    const alerts = (await http.get(`${base()}/dashboard/alerts`).set(auth(admin))).body as { kind: string; count: number }[];
+    expect(alerts.find((a) => a.kind === "resourcesDamaged")?.count).toBe(list.reduce((n, r) => n + r.damaged, 0));
   });
 
   it("إعادة إرسال نفس الإعارة (clientOpId) لا تنشئ إعارة ثانية", async () => {

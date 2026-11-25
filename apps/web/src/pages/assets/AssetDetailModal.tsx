@@ -7,6 +7,7 @@ import { api, ApiError, type Asset } from "../../api";
 import { useAuth } from "../../auth/AuthProvider";
 import { useI18n } from "../../i18n";
 import { useCatalog } from "../../hooks/useCatalog";
+import { usePlaces } from "../../hooks/usePlaces";
 import { fmtMoney, notifyError } from "../../lib/forms";
 import { STATUS_COLOR } from "./AssetsPage";
 
@@ -52,6 +53,9 @@ export function AssetDetailModal({ schoolId, id, onClose, onEdit }: { schoolId: 
                     <Row k={t("assets.fundingSource")} v={cat.lookupLabel(a.fundingSourceId)} />
                     <Row k={t("assets.value")} v={a.acquisitionValue != null ? `${fmtMoney(a.acquisitionValue)} ${t("unit.mad")}` : undefined} />
                     <Row k={t("assets.supplier")} v={a.supplier?.name} />
+                    <Row k={t("assets.room")} v={a.room} />
+                    <Row k={t("assets.facility")} v={a.facility} />
+                    <Row k={t("assets.responsible")} v={a.responsible} />
                     <Row k={t("assets.description")} v={a.description} />
                     {a.archivedAt && <Row k={t("assets.archivedAt")} v={fmtDate(a.archivedAt)} />}
                   </Table.Tbody>
@@ -129,11 +133,15 @@ const FIELD_KEYS: Record<string, string> = {
   acquisitionValue: "assets.value",
   supplierId: "assets.supplier",
   description: "assets.description",
+  roomId: "assets.room",
+  facilityId: "assets.facility",
+  responsibleStaffId: "assets.responsible",
 };
 
 function History({ schoolId, id }: { schoolId: string; id: string }) {
   const { t, fmtDateTime, dir } = useI18n();
   const cat = useCatalog();
+  const places = usePlaces();
   const arrow = dir === "rtl" ? "←" : "→";
   const h = useQuery({ queryKey: ["asset-history", schoolId, id], queryFn: () => api.assets!.history(schoolId, id) });
   const show = (field: string, v: unknown) => {
@@ -141,6 +149,9 @@ function History({ schoolId, id }: { schoolId: string; id: string }) {
     if (field === "status") return t(`assetStatus.${String(v)}`);
     if (field === "categoryId") return cat.categoryLabel(String(v)) || String(v);
     if (field === "supplierId") return cat.suppliers.find((s) => s.id === v)?.name ?? "—";
+    if (field === "roomId") return places.roomOptions.find((o) => o.value === v)?.label ?? "—";
+    if (field === "facilityId") return places.facilityOptions.find((o) => o.value === v)?.label ?? "—";
+    if (field === "responsibleStaffId") return places.staffOptions.find((o) => o.value === v)?.label ?? "—";
     return String(v);
   };
   if (h.isLoading) return <Loader size="sm" />;

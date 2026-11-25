@@ -1,5 +1,6 @@
 import { Button, Card, Group, Skeleton, Text, ThemeIcon, Title, Tooltip } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router";
 import {
   IconAlertTriangle,
   IconArrowsExchange,
@@ -29,11 +30,12 @@ const CARDS: { key: keyof DashboardStats; icon: Icon; color: string }[] = [
   { key: "openMaintenance", icon: IconTool, color: "orange" },
 ];
 
-const QUICK: { key: string; phase: number }[] = [
-  { key: "addAsset", phase: 4 },
-  { key: "addStock", phase: 4 },
-  { key: "newLoan", phase: 5 },
-  { key: "newReturn", phase: 5 },
+/** الإجراءات السريعة: المنجز منها له مسار وصلاحية؛ الباقي معطل مع ذكر مرحلته. */
+const QUICK: { key: string; phase: number; to?: string; perm?: string }[] = [
+  { key: "addAsset", phase: 4, to: "/assets?new=1", perm: "assets.create" },
+  { key: "addStock", phase: 4, to: "/stock", perm: "stock.create" },
+  { key: "newLoan", phase: 5, to: "/loans?new=1", perm: "loans.create" },
+  { key: "newReturn", phase: 5, to: "/loans", perm: "loans.update" },
   { key: "newInventory", phase: 6 },
   { key: "newMaintenance", phase: 6 },
   { key: "newReport", phase: 7 },
@@ -41,10 +43,11 @@ const QUICK: { key: string; phase: number }[] = [
 ];
 
 const CHARTS: { key: string; phase: number }[] = [
-  { key: "assetsByCategory", phase: 4 },
-  { key: "stockStatus", phase: 4 },
-  { key: "resourcesDistribution", phase: 5 },
-  { key: "loansStatus", phase: 5 },
+  // الرسوم البيانية تُبنى مع وحدة التقارير والإحصائيات
+  { key: "assetsByCategory", phase: 7 },
+  { key: "stockStatus", phase: 7 },
+  { key: "resourcesDistribution", phase: 7 },
+  { key: "loansStatus", phase: 7 },
   { key: "acquisitions", phase: 6 },
   { key: "maintenance", phase: 6 },
   { key: "inventoryResults", phase: 6 },
@@ -52,7 +55,8 @@ const CHARTS: { key: string; phase: number }[] = [
 
 export function DashboardPage() {
   const { t, fmtDateTime } = useI18n();
-  const { activeSchool } = useAuth();
+  const { activeSchool, can } = useAuth();
+  const nav = useNavigate();
   const sid = activeSchool?.id;
   const stats = useQuery({ queryKey: ["dash", "stats", sid], queryFn: () => api.dashboardStats(sid!), enabled: !!sid });
   const alerts = useQuery({ queryKey: ["dash", "alerts", sid], queryFn: () => api.dashboardAlerts(sid!), enabled: !!sid });
@@ -87,15 +91,21 @@ export function DashboardPage() {
       <Card>
         <Title order={4} mb="sm">{t("dash.quick.title")}</Title>
         <Group gap="xs">
-          {QUICK.map((q) => (
-            <Tooltip key={q.key} label={t("nav.comingInPhase", { phase: q.phase })}>
+          {QUICK.map((q) =>
+            q.to && api.mode === "server" && (!q.perm || can(q.perm)) ? (
+              <Button key={q.key} variant="light" onClick={() => nav(q.to!)} data-testid={`quick-${q.key}`}>
+                {t(`dash.quick.${q.key}`)}
+              </Button>
+            ) : (
+            <Tooltip key={q.key} label={t(q.to ? (api.mode === "server" ? "errors.forbidden" : "common.serverOnly") : "nav.comingInPhase", { phase: q.phase })}>
               <span>
                 <Button variant="light" disabled data-testid={`quick-${q.key}`}>
                   {t(`dash.quick.${q.key}`)}
                 </Button>
               </span>
             </Tooltip>
-          ))}
+            ),
+          )}
         </Group>
       </Card>
 

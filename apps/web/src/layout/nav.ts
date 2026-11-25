@@ -34,10 +34,10 @@ export const NAV: NavItem[] = [
   { key: "dashboard", icon: IconLayoutDashboard, to: "/" },
   { key: "assets", icon: IconDeviceDesktop, to: "/assets", perm: "assets.view", serverOnly: true },
   { key: "stock", icon: IconPackages, to: "/stock", perm: "stock.view", serverOnly: true },
-  { key: "spaces", icon: IconBuildingCommunity, phase: 5 },
-  { key: "facilities", icon: IconBallFootball, phase: 5 },
-  { key: "resources", icon: IconBook2, phase: 5 },
-  { key: "loans", icon: IconArrowsExchange, phase: 5 },
+  { key: "spaces", icon: IconBuildingCommunity, to: "/spaces", perm: "spaces.view", serverOnly: true },
+  { key: "facilities", icon: IconBallFootball, to: "/facilities", perm: "facilities.view", serverOnly: true },
+  { key: "resources", icon: IconBook2, to: "/resources", perm: "resources.view", serverOnly: true },
+  { key: "loans", icon: IconArrowsExchange, to: "/loans", perm: "loans.view", serverOnly: true },
   { key: "inventory", icon: IconClipboardCheck, phase: 6 },
   { key: "maintenance", icon: IconTool, phase: 6 },
   { key: "purchasing", icon: IconTruckDelivery, phase: 6 },
@@ -51,11 +51,12 @@ export const NAV: NavItem[] = [
   { key: "settings", icon: IconSettings, to: "/settings" },
 ];
 
-/** صفحات قسم الإعدادات (المرجعيات أُضيفت في المرحلة 4). */
+/** صفحات قسم الإعدادات (المرجعيات في المرحلة 4، الموظفون في المرحلة 5). */
 export const SETTINGS_PAGES = [
   { key: "schoolInfo", to: "/settings/school" },
   { key: "hierarchy", to: "/settings/hierarchy" },
   { key: "branding", to: "/settings/branding" },
   { key: "printPreview", to: "/settings/print-preview" },
   { key: "catalog", to: "/settings/catalog" },
+  { key: "staff", to: "/settings/staff" },
 ] as const;

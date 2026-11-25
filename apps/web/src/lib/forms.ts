@@ -33,6 +33,23 @@ const RULES: Record<string, string> = {
   CATEGORY_CYCLE: "errors.categoryCycle",
   NUMBER_GENERATION_FAILED: "errors.numberGeneration",
   NOT_FOUND: "errors.notFound",
+  // المرحلة 5
+  DUPLICATE_STAFF_NUMBER: "errors.duplicateStaffNumber",
+  BUILDING_HAS_ROOMS: "errors.buildingHasRooms",
+  ROOM_NOT_EMPTY: "errors.roomNotEmpty",
+  FACILITY_HAS_EQUIPMENT: "errors.facilityHasEquipment",
+  ARCHIVED: "errors.archivedEntity",
+  TRACKING_LOCKED: "errors.trackingLocked",
+  QUANTITY_BELOW_USED: "errors.quantityBelowUsed",
+  RESOURCE_ON_LOAN: "errors.resourceOnLoan",
+  RESOURCE_ALREADY_ON_LOAN: "errors.resourceAlreadyOnLoan",
+  RESOURCE_NOT_AVAILABLE: "errors.resourceNotAvailable",
+  RESOURCE_NOT_LENDABLE: "errors.resourceNotLendable",
+  QUANTITY_NOT_AVAILABLE: "errors.quantityNotAvailable",
+  RETURN_EXCEEDS: "errors.returnExceeds",
+  LOAN_CLOSED: "errors.loanClosed",
+  NOT_INDIVIDUAL_RESOURCE: "errors.notIndividualResource",
+  NOT_QUANTITY_RESOURCE: "errors.notQuantityResource",
 };
 
 /** مفتاح ومتغيرات رسالة خطأ عام (غير مرتبط بحقل). */
@@ -57,7 +74,10 @@ export function handleFormError<F extends FieldValues>(f: UseFormReturn<F>, t: T
   if (e instanceof ApiError) {
     const target = fieldCodes[e.code];
     if (target) {
-      f.setError(target, { message: RULES[e.code] ?? "errors.invalid" });
+      // التفاصيل (مثلاً الكمية المتاحة) تُدمج في الرسالة هنا لأن رسائل الحقول تُترجم دون متغيرات
+      const d = e.details as Record<string, string | number> | undefined;
+      const key = RULES[e.code] ?? "errors.invalid";
+      f.setError(target, { message: d && Object.keys(d).length ? t(key, d) : key });
       return true;
     }
     const fields = (e.details as { fields?: Record<string, string> } | undefined)?.fields;
@@ -85,3 +105,6 @@ export const today = () => new Date().toISOString().slice(0, 10);
 /** عرض كمية بثلاث خانات عشرية كحد أقصى وبأرقام لاتينية. */
 export const fmtQty = (n: number) => new Intl.NumberFormat("fr-MA", { maximumFractionDigits: 3 }).format(n);
 export const fmtMoney = (n: number) => new Intl.NumberFormat("fr-MA", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+
+/** يوم تاريخ الإرجاع (dueAt مخزن كنهاية اليوم UTC): نعرض اليوم نفسه دون انزياح المنطقة الزمنية. */
+export const dayOf = (iso: string) => `${iso.slice(0, 10)}T12:00:00`;

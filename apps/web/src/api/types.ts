@@ -12,7 +12,7 @@ import type {
   UserCreateInput,
   UserUpdateInput,
 } from "@hassan/validation";
-import type { AssetsApi, CatalogApi, StockApi, SuppliersApi } from "./phase4";
+import type { AssetsApi, CatalogApi, LoansApi, ResourcesApi, SpacesApi, StaffApi, StockApi, SuppliersApi } from "./phase4";
 
 export type RoleCode =
   | "ADMIN"
@@ -170,4 +170,8 @@ export interface Api {
   readonly assets?: AssetsApi;
   readonly stock?: StockApi;
   readonly suppliers?: SuppliersApi;
+  readonly spaces?: SpacesApi;
+  readonly staff?: StaffApi;
+  readonly resources?: ResourcesApi;
+  readonly loans?: LoansApi;
 }

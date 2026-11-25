@@ -24,6 +24,12 @@ import { StockPage } from "./pages/stock/StockPage";
 import { SuppliersPage } from "./pages/SuppliersPage";
 import { ScanPage } from "./pages/ScanPage";
 import { CatalogPage } from "./pages/settings/CatalogPage";
+import { StaffPage } from "./pages/settings/StaffPage";
+import { SpacesPage } from "./pages/spaces/SpacesPage";
+import { FacilitiesPage } from "./pages/spaces/FacilitiesPage";
+import { ResourcesPage } from "./pages/resources/ResourcesPage";
+import { LoansPage } from "./pages/loans/LoansPage";
+import { LoanReceiptPage } from "./pages/loans/LoanReceiptPage";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
@@ -78,6 +84,12 @@ export function App() {
                       <Route path="assets/:id" element={<AssetsPage />} />
                       <Route path="stock" element={<StockPage />} />
                       <Route path="suppliers" element={<SuppliersPage />} />
+                      <Route path="spaces" element={<SpacesPage />} />
+                      <Route path="facilities" element={<FacilitiesPage />} />
+                      <Route path="resources" element={<ResourcesPage />} />
+                      <Route path="resources/:id" element={<ResourcesPage />} />
+                      <Route path="loans" element={<LoansPage />} />
+                      <Route path="loans/:id/receipt" element={<LoanReceiptPage />} />
                       <Route path="scan/:token" element={<ScanPage />} />
                       <Route path="settings" element={<SettingsLayout />}>
                         <Route index element={<Navigate to="school" replace />} />
@@ -86,6 +98,7 @@ export function App() {
                         <Route path="branding" element={<BrandingPage />} />
                         <Route path="print-preview" element={<PrintPreviewPage />} />
                         <Route path="catalog" element={<CatalogPage />} />
+                        <Route path="staff" element={<StaffPage />} />
                       </Route>
                       <Route path="*" element={<NotFoundPage />} />
                     </Route>

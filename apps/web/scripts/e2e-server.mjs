@@ -50,7 +50,7 @@ try {
   const r = spawn("npx", ["playwright", "test", "-c", "playwright.server.config.ts", ...process.argv.slice(2)], {
     cwd: join(root, "apps/web"),
     stdio: "inherit",
-    env: { ...process.env, API_PROXY_TARGET: "http://localhost:3100" },
+    env: { ...process.env, API_PROXY_TARGET: "http://localhost:3100", E2E_DB_SCHEMA: schema },
   });
   code = await new Promise((res) => r.on("exit", (c) => res(c ?? 1)));
 } finally {

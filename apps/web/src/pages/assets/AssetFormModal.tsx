@@ -1,26 +1,24 @@
 import { useState } from "react";
-import { Button, FileButton, Grid, Group, Image, Modal, NumberInput, SegmentedControl, Select, Stack, Text, TextInput, Textarea } from "@mantine/core";
+import { Button, Grid, Group, Modal, NumberInput, SegmentedControl, Select, Stack, Text, TextInput, Textarea } from "@mantine/core";
 import { useQueryClient } from "@tanstack/react-query";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { IconPhoto, IconTrash } from "@tabler/icons-react";
-import { assetSchema, LOGO_MAX_BYTES, type AssetInput } from "@hassan/validation";
+import { assetSchema, type AssetInput } from "@hassan/validation";
 import { api, type Asset } from "../../api";
 import { useI18n } from "../../i18n";
 import { useCatalog } from "../../hooks/useCatalog";
 import { fieldError, handleFormError } from "../../lib/forms";
-import { readImage } from "../../lib/files";
-
-const PHOTO_TYPES = ["image/png", "image/jpeg", "image/webp"];
+import { PhotoField } from "../../components/PhotoField";
+import { usePlaces, withCurrent } from "../../hooks/usePlaces";
 
 /** نموذج إضافة/تعديل ممتلك. رقم الجرد فارغ = يُولَّد حسب صيغة المؤسسة. */
 export function AssetFormModal({ schoolId, asset, onClose, onSaved }: { schoolId: string; asset?: Asset; onClose: () => void; onSaved: (a: Asset) => void }) {
   const { t } = useI18n();
   const cat = useCatalog();
+  const places = usePlaces();
   const qc = useQueryClient();
   // undefined = الصورة الحالية دون تغيير، null = حذفها، نص = صورة جديدة
   const [photo, setPhoto] = useState<string | null | undefined>(undefined);
-  const [photoError, setPhotoError] = useState<string | null>(null);
   const f = useForm<AssetInput>({
     resolver: zodResolver(assetSchema),
     defaultValues: asset
@@ -37,25 +35,19 @@ export function AssetFormModal({ schoolId, asset, onClose, onSaved }: { schoolId
           fundingSourceId: asset.fundingSourceId ?? "",
           acquisitionValue: asset.acquisitionValue ?? null,
           supplierId: asset.supplierId ?? "",
+          roomId: asset.roomId ?? "",
+          facilityId: asset.facilityId ?? "",
+          responsibleStaffId: asset.responsibleStaffId ?? "",
           status: asset.status === "DISPOSED" ? "AVAILABLE" : asset.status,
         }
       : { trackingMode: "INDIVIDUAL", quantity: 1, status: "AVAILABLE", inventoryNumber: "", acquisitionValue: null },
   });
   const err = fieldError(f, t);
   const mode = f.watch("trackingMode");
-  const shownPhoto = photo === undefined ? asset?.photoDataUrl : photo;
 
   // مورد مؤرشف مرتبط بالممتلك يبقى ظاهراً في الاختيار
   const supplierOptions = [...cat.supplierOptions];
   if (asset?.supplier && !supplierOptions.some((o) => o.value === asset.supplier!.id)) supplierOptions.push({ value: asset.supplier.id, label: asset.supplier.name });
-
-  const pickPhoto = async (file: File | null) => {
-    if (!file) return;
-    const r = await readImage(file, PHOTO_TYPES, LOGO_MAX_BYTES);
-    if (!r.ok) return setPhotoError(t(r.error === "size" ? "errors.fileTooLarge" : "errors.fileType"));
-    setPhotoError(null);
-    setPhoto(r.dataUrl);
-  };
 
   const submit = f.handleSubmit(async (v) => {
     const body: AssetInput = { ...v, quantity: v.trackingMode === "INDIVIDUAL" ? 1 : v.quantity, photoDataUrl: photo };
@@ -190,35 +182,38 @@ export function AssetFormModal({ schoolId, asset, onClose, onSaved }: { schoolId
                 )}
               />
             </Grid.Col>
+            <Grid.Col span={{ base: 12, sm: 4 }}>
+              <Controller
+                control={f.control}
+                name="roomId"
+                render={({ field }) => (
+                  <Select label={t("assets.room")} clearable searchable data={withCurrent(places.roomOptions, asset?.roomId, asset?.room)} value={field.value || null} onChange={(x) => field.onChange(x ?? "")} error={err("roomId")} data-testid="asset-roomId" />
+                )}
+              />
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, sm: 4 }}>
+              <Controller
+                control={f.control}
+                name="facilityId"
+                render={({ field }) => (
+                  <Select label={t("assets.facility")} clearable searchable data={withCurrent(places.facilityOptions, asset?.facilityId, asset?.facility)} value={field.value || null} onChange={(x) => field.onChange(x ?? "")} error={err("facilityId")} data-testid="asset-facilityId" />
+                )}
+              />
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, sm: 4 }}>
+              <Controller
+                control={f.control}
+                name="responsibleStaffId"
+                render={({ field }) => (
+                  <Select label={t("assets.responsible")} clearable searchable data={withCurrent(places.staffOptions, asset?.responsibleStaffId, asset?.responsible)} value={field.value || null} onChange={(x) => field.onChange(x ?? "")} error={err("responsibleStaffId")} data-testid="asset-responsibleStaffId" />
+                )}
+              />
+            </Grid.Col>
             <Grid.Col span={12}>
               <Textarea label={t("assets.description")} autosize minRows={2} {...f.register("description")} error={err("description")} />
             </Grid.Col>
             <Grid.Col span={12}>
-              <Text size="sm" fw={500} mb={4}>{t("assets.photo")}</Text>
-              <Group align="center">
-                {shownPhoto ? (
-                  <Image src={shownPhoto} alt={t("assets.photo")} h={90} w={120} fit="contain" radius="sm" className="border border-gray-200" />
-                ) : (
-                  <div className="flex h-[90px] w-[120px] items-center justify-center rounded border border-dashed border-gray-300 text-gray-400">
-                    <IconPhoto size={28} />
-                  </div>
-                )}
-                <Stack gap={4}>
-                  <FileButton onChange={pickPhoto} accept={PHOTO_TYPES.join(",")}>
-                    {(props) => (
-                      <Button size="xs" variant="light" {...props}>
-                        {shownPhoto ? t("assets.changePhoto") : t("assets.addPhoto")}
-                      </Button>
-                    )}
-                  </FileButton>
-                  {shownPhoto && (
-                    <Button size="xs" variant="subtle" color="red" leftSection={<IconTrash size={14} />} onClick={() => setPhoto(null)}>
-                      {t("assets.removePhoto")}
-                    </Button>
-                  )}
-                  <Text size="xs" c={photoError ? "red" : "dimmed"}>{photoError ?? t("assets.photoHint")}</Text>
-                </Stack>
-              </Group>
+              <PhotoField current={asset?.photoDataUrl} value={photo} onChange={setPhoto} />
             </Grid.Col>
           </Grid>
           <Group justify="flex-end">

@@ -169,20 +169,37 @@
 5. `INSERT audit_logs`
 6. COMMIT، ثم تقييم التنبيهات (حد أدنى) خارج المعاملة
 
-### 3.8 البنايات والفضاءات والملاعب
-`/buildings`, `/rooms` (فلترة بالنوع والبناية والحالة)، `/rooms/:id/contents` (الممتلكات والوسائل الموجودة)، `/facilities`، `/facilities/:id/equipment`. كلها CRUD + archive.
-
-### 3.9 الوسائل التعليمية والإعارة
+### 3.8 البنايات والفضاءات والملاعب والموظفون ✅
+المسارات تحت `/schools/:schoolId`. القراءة متاحة لكل مستخدم في المؤسسة (لقوائم الاختيار)، والكتابة 🔒 `spaces.*` / `facilities.*`. لا حذف: `POST /:id/archive` و`/:id/restore`.
 | الطريقة | المسار | الوصف |
 |---|---|---|
-| GET/POST/PATCH | `/resources[/:id]` | |
-| GET/POST | `/resources/:id/units` | الوحدات الفردية |
-| GET | `/resources/:id/availability` | المتاح الآن |
-| GET | `/loans?status=&overdue=true&borrowerId=` | |
-| POST | `/loans` | `{resourceId, unitId? , quantity?, borrowerStaffId, classId?, dueAt, conditionOut}` — معارة → `409 RESOURCE_ALREADY_ON_LOAN`، معطوبة → `422 RESOURCE_NOT_AVAILABLE` |
-| POST | `/loans/:id/returns` | `{quantity, conditionIn, damaged}` — إرجاع كلي أو جزئي |
-| POST | `/loans/:id/signature` | توقيع المستعير |
-| GET | `/loans/:id/receipt.pdf` · `/returns/:id/receipt.pdf` | وصل الإعارة / الإرجاع |
+| GET/POST/PUT | `/buildings[/:id]?archived=1` | مع عدد الحجرات النشطة؛ أرشفة بناية تضم حجرات نشطة → `422 BUILDING_HAS_ROOMS` |
+| GET | `/rooms?q=&buildingId=&spaceTypeId=&status=&archived=1` | مع `counts {assets, resourceUnits, facilities}` |
+| POST/PUT | `/rooms[/:id]` | رمز مكرر → `409 DUPLICATE_CODE`؛ بناية مؤرشفة → `errors.archivedChoice` |
+| GET | `/rooms/:id/contents` | 🔒 `spaces.view` الممتلكات والوحدات والأصناف الكمية والمرافق الموجودة |
+| POST | `/rooms/:id/archive` | حجرة غير فارغة → `422 ROOM_NOT_EMPTY {assets, units}` |
+| GET/POST/PUT | `/facilities[/:id]` | النوع من `FACILITY_TYPE`، حالة الأرضية والشباك؛ أرشفة مع تجهيزات → `422 FACILITY_HAS_EQUIPMENT` |
+| GET | `/facilities/:id/equipment` | 🔒 `facilities.view` الممتلكات المرتبطة |
+| GET/POST/PUT | `/staff[/:id]?q=&all=1` | الكتابة لمن يملك إحدى: `loans.create`، `custody.create`، `assets.update`، `users.manage`، `settings.manage`؛ رقم تأجير مكرر → `409 DUPLICATE_STAFF_NUMBER` |
+
+الممتلك يقبل `roomId` و`facilityId` و`responsibleStaffId`؛ تغيير الحجرة يغلق `asset_locations` المفتوح ويفتح سطراً جديداً.
+
+### 3.9 الوسائل التعليمية والإعارة ✅
+| الطريقة | المسار | الوصف |
+|---|---|---|
+| GET | `/resources?q=&resourceTypeId=&archived=1&lendable=1` | 🔒 `resources.view` مع `{total, available, onLoan, damaged, maintenance}` |
+| GET | `/resources/:id` | البطاقة والوحدات (الحالة، الحجرة، `qrToken`، الإعارة الجارية) |
+| POST/PUT | `/resources[/:id]` | `trackingMode` لا يتغير بعد وجود وحدات/إعارات → `422 TRACKING_LOCKED`؛ إجمالي أقل من المعار+المعطوب → `422 QUANTITY_BELOW_USED` |
+| POST | `/resources/:id/damaged` | 🔒 `resources.update` `{quantityDamaged, reason}` للأصناف الكمية |
+| POST | `/resources/:id/units` · PUT `/resources/:id/units/:unitId` | رقم فارغ = `CODE-001`؛ الحالة `ON_LOAN` لا تُضبط يدوياً |
+| POST | `/resources/:id/archive` | إعارات جارية → `422 RESOURCE_ON_LOAN` |
+| GET | `/loans?status=open\|returned&overdue=1&borrowerId=&resourceId=&q=&page=` | 🔒 `loans.view` مع `outstanding`، `overdue`، `lateDays`، `returns` |
+| GET | `/loans/:id` | تفاصيل الإعارة والإرجاعات (للوصل) |
+| POST | `/loans` | 🔒 `loans.create` `{resourceId, unitId?, quantity, borrowerStaffId, dueAt (YYYY-MM-DD), conditionOut?, notes?, clientOpId?}` — معارة → `409 RESOURCE_ALREADY_ON_LOAN`، معطوبة/قيد الصيانة → `422 RESOURCE_NOT_AVAILABLE`، كمية زائدة → `422 QUANTITY_NOT_AVAILABLE {available, requested}`، غير قابلة للإعارة → `422 RESOURCE_NOT_LENDABLE`، تاريخ ماضٍ → `errors.dueInPast` |
+| POST | `/loans/:id/returns` | 🔒 `loans.update` `{quantity, damaged, conditionIn?, notes?, clientOpId?}` — أكثر من المتبقي → `422 RETURN_EXCEEDS`، مغلقة → `422 LOAN_CLOSED` |
+| GET | `/scan/:qrToken` | يحل رمز الوحدة إلى `{kind:"resourceUnit", id: resourceId, unitId, schoolId}` |
+
+التأخير = عدد الأيام (بالتقريب للأعلى) بعد نهاية يوم الإرجاع المتوقع؛ للإعارة المرجعة يُحسب حتى آخر إرجاع. **مؤجل**: `POST /loans/:id/signature` (التوقيع الإلكتروني)، `classId`، `receipt.pdf` من الخادم (المرحلة 7؛ الوصل الآن صفحة A4 في الواجهة `#/loans/:id/receipt`).
 
 ### 3.10 الجرد
 `POST /inventory-sessions` (نوع، تواريخ، فضاءات، مكلفون) → `POST /:id/open` (يأخذ لقطة النظري) → `POST /:id/counts` (سطر عدّ، يقبل `Idempotency-Key`، يدعم QR) → `GET /:id/discrepancies` → `POST /:id/complete` → `POST /:id/validate` 🔒 → `POST /:id/close` → `GET /:id/report.pdf` (المحضر).

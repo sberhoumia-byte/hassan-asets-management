@@ -79,3 +79,59 @@ test("لقطات المرحلة 4", async ({ page }) => {
   await page.waitForTimeout(300);
   await page.screenshot({ path: `${dir}/09-catalog-settings.png`, fullPage: true });
 });
+
+test("لقطات المرحلة 5", async ({ page }) => {
+  const dir = "../../docs/UI/screenshots/phase5";
+  const year = new Date().getFullYear();
+  const shot = async (name: string, fullPage = false) => {
+    await page.waitForTimeout(350);
+    await page.screenshot({ path: `${dir}/${name}.png`, fullPage });
+  };
+  await page.goto("/#/login");
+  await page.getByLabel("اسم المستخدم").fill("admin");
+  await page.getByLabel("كلمة المرور", { exact: true }).fill("Passw0rd123");
+  await page.getByTestId("login-submit").click();
+  await page.getByTestId("header-school").waitFor();
+
+  await page.goto("/#/spaces");
+  await page.getByTestId("rooms-table").waitFor();
+  await shot("01-rooms");
+  await page.getByTestId("view-S01").click();
+  await page.getByTestId("room-contents").waitFor();
+  await shot("02-room-contents");
+  await page.keyboard.press("Escape");
+  await page.goto("/#/facilities");
+  await page.getByTestId("facilities-table").waitFor();
+  await shot("03-facilities");
+
+  await page.goto("/#/resources");
+  await page.getByTestId("resources-table").waitFor();
+  await shot("04-resources");
+  await page.getByTestId("resource-row-PROJ").click();
+  await page.getByTestId("units-tab").click();
+  await page.getByTestId("units-table").waitFor();
+  await shot("05-resource-units");
+  await page.keyboard.press("Escape");
+
+  await page.goto("/#/loans");
+  await page.getByTestId("loans-view").getByText("الكل").click();
+  await page.getByTestId(`loan-row-LN-${year}-00001`).waitFor();
+  await shot("06-loans");
+  await page.getByTestId("new-loan").click();
+  const dlg = page.getByRole("dialog");
+  await dlg.getByRole("textbox", { name: "الوسيلة" }).click();
+  await page.getByRole("option", { name: /BALL/ }).click();
+  await dlg.getByLabel("الكمية").fill("9");
+  await dlg.getByRole("textbox", { name: "المستعير" }).click();
+  await page.getByRole("option", { name: /أحمد العلوي/ }).click();
+  await page.getByTestId("loan-save").click();
+  await dlg.getByText("الكمية غير متوفرة").waitFor();
+  await shot("07-quantity-refused");
+  await page.keyboard.press("Escape");
+  await page.getByTestId(`receipt-LN-${year}-00002`).click();
+  await page.getByTestId("loan-receipt").waitFor();
+  await shot("08-return-receipt", true);
+  await page.goto("/#/settings/staff");
+  await page.getByTestId("staff-table").waitFor();
+  await shot("09-staff");
+});

@@ -1,4 +1,5 @@
 import { frPhase4 } from "./phase4.fr";
+import { frPhase5 } from "./phase5.fr";
 
 export const fr: Record<string, string> = {
   "app.shortName": "Gestion matérielle",
@@ -367,4 +368,5 @@ export const fr: Record<string, string> = {
   "setup.tokenHint": "Valeur SETUP_TOKEN définie sur le serveur",
   "setup.badToken": "Code d'installation incorrect",
   ...frPhase4,
+  ...frPhase5,
 };
