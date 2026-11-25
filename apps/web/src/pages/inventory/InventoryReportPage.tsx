@@ -39,7 +39,7 @@ export function InventoryReportPage() {
   const final = ["VALIDATED", "CLOSED", "ARCHIVED"].includes(x.status);
   return (
     <>
-      <DocToolbar title={<>{title} — <span dir="ltr">{x.number}</span></>} intro={t("invReport.intro")} back={`/inventory/${id}`} />
+      <DocToolbar title={<>{title} — <span dir="ltr">{x.number}</span></>} intro={t("invReport.intro")} back={`/inventory/${id}`} serverPdf={{ kind: "inventory", id }} />
       {!final && <Alert color="orange" variant="light" className="no-print">{t("invReport.draftWarning")}</Alert>}
       <A4Frame>
         <A4Sheet branding={branding.data} school={activeSchool} title={title} number={x.number} testId="inv-report-doc">

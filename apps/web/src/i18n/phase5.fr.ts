@@ -180,7 +180,7 @@ export const frPhase5: Record<string, string> = {
 
   "receipt.titleLoan": "Reçu de prêt de ressource pédagogique",
   "receipt.titleReturn": "Reçu de retour de ressource pédagogique",
-  "receipt.intro": "Aperçu du reçu avec l'en-tête de l'établissement. Impression ou PDF via la fenêtre d'impression.",
+  "receipt.intro": "Aperçu du bon avec l'en-tête de l'établissement. Téléchargez le PDF du serveur (archivé avec un numéro) ou imprimez-le depuis le navigateur.",
   "receipt.back": "Retour aux prêts",
   "receipt.number": "N° du reçu",
   "receipt.handedOverBy": "Remis par",

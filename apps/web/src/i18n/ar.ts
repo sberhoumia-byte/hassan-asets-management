@@ -255,7 +255,7 @@ export const ar: Record<string, string> = {
   "print.backToBranding": "الرجوع إلى الإعدادات",
   "print.print": "طباعة / حفظ PDF",
   "print.rows": "عدد أسطر النموذج",
-  "print.pdfNote": "في هذه المرحلة يُحفظ PDF من نافذة الطباعة (اختر «حفظ بصيغة PDF»). توليد PDF من الخادم بخطوط مضمنة يأتي في المرحلة 7.",
+  "print.pdfNote": "هذه معاينة للهوية البصرية تُطبع من المتصفح. ملفات PDF الرسمية بخطوط مضمنة تُولَّد من الخادم في صفحة التقارير وتُحفظ في الأرشيف.",
   "print.sampleTitle": "نموذج تقرير: جرد الممتلكات",
   "print.sampleCell": "سطر نموذجي",
   "print.col.number": "ر.ت",

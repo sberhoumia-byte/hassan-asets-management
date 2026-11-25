@@ -38,6 +38,7 @@ import { InventorySessionPage } from "./pages/inventory/InventorySessionPage";
 import { InventoryReportPage } from "./pages/inventory/InventoryReportPage";
 import { PurchasingPage } from "./pages/purchasing/PurchasingPage";
 import { PurchaseOrderPage } from "./pages/purchasing/PurchaseOrderPage";
+import { ReportsPage } from "./pages/reports/ReportsPage";
 import { ApprovalWorkflowsPage } from "./pages/settings/ApprovalWorkflowsPage";
 
 const queryClient = new QueryClient({
@@ -107,6 +108,7 @@ export function App() {
                       <Route path="inventory/:id/report" element={<InventoryReportPage />} />
                       <Route path="purchasing" element={<PurchasingPage />} />
                       <Route path="purchasing/:id" element={<PurchaseOrderPage />} />
+                      <Route path="reports" element={<ReportsPage />} />
                       <Route path="scan/:token" element={<ScanPage />} />
                       <Route path="settings" element={<SettingsLayout />}>
                         <Route index element={<Navigate to="school" replace />} />

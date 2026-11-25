@@ -46,7 +46,7 @@ export const NAV: NavItem[] = [
   { key: "floorplan", icon: IconMap2, phase: 8 },
   { key: "excel", icon: IconFileSpreadsheet, phase: 7 },
   { key: "documents", icon: IconArchive, phase: 7 },
-  { key: "reports", icon: IconChartBar, phase: 7 },
+  { key: "reports", icon: IconChartBar, to: "/reports", perm: "reports.view", serverOnly: true },
   { key: "users", icon: IconUsers, to: "/users", perm: "users.manage", serverOnly: true },
   { key: "settings", icon: IconSettings, to: "/settings" },
 ];

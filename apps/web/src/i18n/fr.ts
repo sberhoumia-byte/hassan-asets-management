@@ -255,7 +255,7 @@ export const fr: Record<string, string> = {
   "print.backToBranding": "Retour aux paramètres",
   "print.print": "Imprimer / PDF",
   "print.rows": "Lignes du modèle",
-  "print.pdfNote": "À ce stade, le PDF s'obtient depuis la fenêtre d'impression (« Enregistrer en PDF »). La génération PDF côté serveur avec polices intégrées arrive en phase 7.",
+  "print.pdfNote": "Cet aperçu de l'identité visuelle s'imprime depuis le navigateur. Les PDF officiels à polices intégrées sont générés par le serveur dans la page Rapports et archivés.",
   "print.sampleTitle": "نموذج تقرير: جرد الممتلكات",
   "print.sampleCell": "سطر نموذجي",
   "print.col.number": "ر.ت",

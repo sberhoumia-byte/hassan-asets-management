@@ -74,6 +74,10 @@ const RULES: Record<string, string> = {
   NO_SUPPLIER: "errors.noSupplier",
   DUPLICATE_INVOICE: "errors.duplicateInvoice",
   UNPOSTED_ITEMS: "errors.unpostedItems",
+  REPORT_TOO_LARGE: "errors.reportTooLarge",
+  PDF_ENGINE_UNAVAILABLE: "errors.pdfEngine",
+  FILE_INTEGRITY: "errors.fileIntegrity",
+  FILE_MISSING: "errors.fileMissing",
 };
 
 /** مفتاح ومتغيرات رسالة خطأ عام (غير مرتبط بحقل). */

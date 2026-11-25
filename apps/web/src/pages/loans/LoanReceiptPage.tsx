@@ -8,10 +8,11 @@ import { useI18n } from "../../i18n";
 import { LetterheadView } from "../../print/LetterheadView";
 import { ScaledPreview } from "../../print/ScaledPreview";
 import { dayOf } from "../../lib/forms";
+import { ServerPdfButton } from "../../print/ServerPdfButton";
 
 /**
  * وصل الإعارة/الإرجاع على صفحة A4 بترويسة المؤسسة المحفوظة، مع خانات التوقيع.
- * يُطبع من المتصفح (حفظ PDF من نافذة الطباعة)؛ توليد PDF من الخادم يأتي في المرحلة 7.
+ * يُطبع من المتصفح، أو يُولَّد PDF على الخادم ويؤرشف برقم.
  */
 export function LoanReceiptPage() {
   const { t, fmtDate, fmtDateTime, dir } = useI18n();
@@ -56,6 +57,7 @@ export function LoanReceiptPage() {
             <Button variant="default" leftSection={<IconArrowBack size={16} />} onClick={() => nav("/loans")}>
               {t("receipt.back")}
             </Button>
+            <ServerPdfButton kind="loan" id={id} />
             {import.meta.env.MODE !== "review" && (
               <Button leftSection={<IconPrinter size={16} />} onClick={() => window.print()} data-testid="print">
                 {t("print.print")}

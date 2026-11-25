@@ -28,6 +28,8 @@ import type { AssetsApi, CatalogApi, LoansApi, ResourcesApi, SpacesApi, StaffApi
 import { HttpAssetsApi, HttpCatalogApi, HttpLoansApi, HttpResourcesApi, HttpSpacesApi, HttpStaffApi, HttpStockApi, HttpSuppliersApi } from "./phase4Http";
 import type { CustodyApi, InventoryApi, MaintenanceApi, PurchasingApi } from "../phase6";
 import { HttpCustodyApi, HttpInventoryApi, HttpMaintenanceApi, HttpPurchasingApi } from "./phase6Http";
+import type { GeneratedDownload, ReportsApi } from "../phase7";
+import { HttpReportsApi } from "./phase7Http";
 
 type Method = "GET" | "POST" | "PUT" | "DELETE";
 interface Opts {
@@ -57,6 +59,7 @@ export class HttpApi implements Api {
   readonly custody: CustodyApi;
   readonly inventory: InventoryApi;
   readonly purchasing: PurchasingApi;
+  readonly reports: ReportsApi;
 
   constructor(private base = "/api/v1") {
     this.users = new HttpUsersApi(this);
@@ -72,6 +75,39 @@ export class HttpApi implements Api {
     this.custody = new HttpCustodyApi(this);
     this.inventory = new HttpInventoryApi(this);
     this.purchasing = new HttpPurchasingApi(this);
+    this.reports = new HttpReportsApi(this);
+  }
+
+  /** طلب يعيد ملفاً (PDF/Excel) مع رقم الأرشيف من الترويسات؛ الأخطاء تبقى JSON كالمعتاد. */
+  async requestFile(method: Method, path: string, o: Opts = {}): Promise<GeneratedDownload> {
+    const url = new URL(this.base + path, window.location.origin);
+    const headers: Record<string, string> = { Accept: "application/pdf, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/json" };
+    if (o.body !== undefined) headers["Content-Type"] = "application/json";
+    if (this.accessToken) headers.Authorization = `Bearer ${this.accessToken}`;
+    let res: Response;
+    try {
+      res = await fetch(url, { method, headers, credentials: "include", body: o.body === undefined ? undefined : JSON.stringify(o.body) });
+    } catch {
+      throw new ApiError("NETWORK_ERROR");
+    }
+    if (res.status === 401 && o.retry !== false) {
+      const u = await this.refresh();
+      if (u) return this.requestFile(method, path, { ...o, retry: false });
+    }
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      throw new ApiError((data?.error?.code as string | undefined) ?? "HTTP_" + res.status, data?.error?.details);
+    }
+    const disp = res.headers.get("Content-Disposition") ?? "";
+    const filename = /filename="([^"]+)"/.exec(disp)?.[1] ?? "document";
+    const pages = res.headers.get("X-Report-Pages");
+    return {
+      blob: await res.blob(),
+      filename,
+      number: res.headers.get("X-Report-Number") ?? "",
+      id: res.headers.get("X-Report-Id") ?? "",
+      pages: pages ? Number(pages) : undefined,
+    };
   }
 
   async request<T>(method: Method, path: string, o: Opts = {}): Promise<T> {

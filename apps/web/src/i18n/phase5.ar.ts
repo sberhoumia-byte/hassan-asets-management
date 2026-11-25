@@ -189,7 +189,7 @@ export const arPhase5: Record<string, string> = {
   // الوصل
   "receipt.titleLoan": "وصل إعارة وسيلة تعليمية",
   "receipt.titleReturn": "وصل إرجاع وسيلة تعليمية",
-  "receipt.intro": "معاينة الوصل بترويسة المؤسسة. يُطبع أو يُحفظ PDF من نافذة الطباعة.",
+  "receipt.intro": "معاينة الوصل بترويسة المؤسسة. نزّله PDF من الخادم (يُحفظ في الأرشيف برقم) أو اطبعه من المتصفح.",
   "receipt.back": "الرجوع إلى الإعارات",
   "receipt.number": "رقم الوصل",
   "receipt.handedOverBy": "سلّمها",

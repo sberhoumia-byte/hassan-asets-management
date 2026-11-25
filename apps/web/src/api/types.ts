@@ -14,6 +14,7 @@ import type {
 } from "@hassan/validation";
 import type { AssetsApi, CatalogApi, LoansApi, ResourcesApi, SpacesApi, StaffApi, StockApi, SuppliersApi } from "./phase4";
 import type { CustodyApi, InventoryApi, MaintenanceApi, PurchasingApi } from "./phase6";
+import type { ReportsApi } from "./phase7";
 
 export type RoleCode =
   | "ADMIN"
@@ -180,4 +181,6 @@ export interface Api {
   readonly custody?: CustodyApi;
   readonly inventory?: InventoryApi;
   readonly purchasing?: PurchasingApi;
+  // المرحلة 7 (الخادم فقط)
+  readonly reports?: ReportsApi;
 }

@@ -47,7 +47,7 @@ export function CustodyReportPage() {
     r.action === "RELOCATION" ? ["custodyReport.signOfficer", "receipt.signDirector"] : r.action === "RETURN" ? ["custodyReport.signFrom", "custodyReport.signOfficer", "receipt.signDirector"] : ["custodyReport.signFrom", "custodyReport.signTo", "receipt.signDirector"];
   return (
     <>
-      <DocToolbar title={<>{title} — <span dir="ltr">{r.number}</span></>} intro={t("receipt.intro")} back="/custody" />
+      <DocToolbar title={<>{title} — <span dir="ltr">{r.number}</span></>} intro={t("receipt.intro")} back="/custody" serverPdf={{ kind: "custody", id }} />
       <A4Frame>
         <A4Sheet branding={branding.data} school={activeSchool} title={title} number={r.number} testId="custody-report">
           <KvTable rows={rows} />

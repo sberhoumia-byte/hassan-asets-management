@@ -7,7 +7,6 @@ import {
   IconBallFootball,
   IconBook2,
   IconBuildingCommunity,
-  IconChartPie,
   IconClockExclamation,
   IconDeviceDesktop,
   IconHistory,
@@ -18,6 +17,7 @@ import {
 import { api, type DashboardStats } from "../api";
 import { useAuth } from "../auth/AuthProvider";
 import { useI18n } from "../i18n";
+import { DashboardCharts } from "./DashboardCharts";
 
 const CARDS: { key: keyof DashboardStats; icon: Icon; color: string }[] = [
   { key: "assets", icon: IconDeviceDesktop, color: "brand" },
@@ -42,16 +42,6 @@ const QUICK: { key: string; phase: number; to?: string; perm?: string }[] = [
   { key: "importExcel", phase: 7 },
 ];
 
-const CHARTS: { key: string; phase: number }[] = [
-  // الرسوم البيانية تُبنى مع وحدة التقارير والإحصائيات
-  { key: "assetsByCategory", phase: 7 },
-  { key: "stockStatus", phase: 7 },
-  { key: "resourcesDistribution", phase: 7 },
-  { key: "loansStatus", phase: 7 },
-  { key: "acquisitions", phase: 7 },
-  { key: "maintenance", phase: 7 },
-  { key: "inventoryResults", phase: 7 },
-];
 
 export function DashboardPage() {
   const { t, fmtDateTime } = useI18n();
@@ -111,18 +101,7 @@ export function DashboardPage() {
 
       <div className="grid gap-4 xl:grid-cols-3">
         <div className="xl:col-span-2 grid gap-4 md:grid-cols-2">
-          {CHARTS.map((c) => (
-            <Card key={c.key}>
-              <Title order={5} mb="sm">{t(`dash.charts.${c.key}`)}</Title>
-              <div className="h-40 rounded-lg border border-dashed border-[var(--line)] bg-[#fafbfd] grid place-items-center text-center p-3">
-                <div>
-                  <IconChartPie size={28} color="#9aa7ba" />
-                  <Text size="sm" c="dimmed">{t("dash.charts.empty")}</Text>
-                  <Text size="xs" c="dimmed">{t("nav.comingInPhase", { phase: c.phase })}</Text>
-                </div>
-              </div>
-            </Card>
-          ))}
+          <DashboardCharts sid={sid} />
         </div>
         <div className="grid gap-4 content-start">
           <Card>

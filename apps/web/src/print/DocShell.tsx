@@ -6,9 +6,10 @@ import type { Branding, School } from "../api/types";
 import { useI18n } from "../i18n";
 import { LetterheadView } from "./LetterheadView";
 import { ScaledPreview } from "./ScaledPreview";
+import { ServerPdfButton } from "./ServerPdfButton";
 
-/** شريط الوثيقة (رجوع + طباعة من المتصفح). توليد PDF من الخادم يأتي في المرحلة 7. */
-export function DocToolbar({ title, intro, back }: { title: ReactNode; intro: string; back: string }) {
+/** شريط الوثيقة: رجوع، PDF من الخادم (مؤرشف)، وطباعة من المتصفح. */
+export function DocToolbar({ title, intro, back, serverPdf }: { title: ReactNode; intro: string; back: string; serverPdf?: { kind: "loan" | "custody" | "inventory"; id: string } }) {
   const { t } = useI18n();
   const nav = useNavigate();
   return (
@@ -22,6 +23,7 @@ export function DocToolbar({ title, intro, back }: { title: ReactNode; intro: st
           <Button variant="default" leftSection={<IconArrowBack size={16} />} onClick={() => nav(back)}>
             {t("doc.back")}
           </Button>
+          {serverPdf && <ServerPdfButton kind={serverPdf.kind} id={serverPdf.id} />}
           {import.meta.env.MODE !== "review" && (
             <Button leftSection={<IconPrinter size={16} />} onClick={() => window.print()} data-testid="print">
               {t("print.print")}
