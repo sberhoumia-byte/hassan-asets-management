@@ -165,3 +165,8 @@ export const DEFAULT_HIERARCHY = {
 export * from "./branding";
 export * from "./text";
 export * from "./schoolYear";
+export * from "./numbering";
+
+/** القوائم المرجعية التي تديرها المؤسسة من الواجهة (المرحلة 4). */
+export const LOOKUP_KEYS = ["ASSET_TYPE", "FUNDING_SOURCE", "UNIT_OF_MEASURE", "SUPPLIER_ACTIVITY", "CONDITION", "DOCUMENT_CATEGORY", "SPACE_TYPE", "MAINTENANCE_TYPE_LABEL"] as const;
+export type LookupKey = (typeof LOOKUP_KEYS)[number];

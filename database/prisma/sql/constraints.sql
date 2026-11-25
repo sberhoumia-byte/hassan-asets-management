@@ -59,3 +59,6 @@ CREATE UNIQUE INDEX school_years_one_current
 -- 10) الأسعار والقيم غير سالبة.
 ALTER TABLE assets ADD CONSTRAINT asset_value_non_negative CHECK ("acquisitionValue" IS NULL OR "acquisitionValue" >= 0);
 ALTER TABLE assets ADD CONSTRAINT asset_qty_positive CHECK (quantity >= 1);
+
+-- (هجرة 20261125195004_stock_direction) اتجاه الحركة: +1 يزيد الرصيد، -1 ينقصه
+ALTER TABLE stock_movements ADD CONSTRAINT stock_movement_direction CHECK (direction IN (-1, 1));

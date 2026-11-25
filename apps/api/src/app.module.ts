@@ -18,6 +18,14 @@ import { DashboardController } from "./dashboard/dashboard.controller";
 import { UsersService } from "./users/users.service";
 import { UsersController } from "./users/users.controller";
 import { HealthController } from "./health/health.controller";
+import { CatalogService } from "./catalog/catalog.service";
+import { CatalogController } from "./catalog/catalog.controller";
+import { AssetsService } from "./assets/assets.service";
+import { AssetsController } from "./assets/assets.controller";
+import { StockService } from "./stock/stock.service";
+import { StockController } from "./stock/stock.controller";
+import { SuppliersService } from "./suppliers/suppliers.service";
+import { SuppliersController } from "./suppliers/suppliers.controller";
 
 @Module({
   imports: [
@@ -26,7 +34,7 @@ import { HealthController } from "./health/health.controller";
     // حد عام سخي لكل عنوان؛ مسارات الدخول لها حد أضيق (@Throttle)
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 600 }]),
   ],
-  controllers: [AuthController, HierarchyController, BrandingController, DashboardController, UsersController, HealthController],
+  controllers: [AuthController, HierarchyController, BrandingController, DashboardController, UsersController, HealthController, CatalogController, AssetsController, StockController, SuppliersController],
   providers: [
     AuditService,
     AccessService,
@@ -36,6 +44,10 @@ import { HealthController } from "./health/health.controller";
     BrandingService,
     DashboardService,
     UsersService,
+    CatalogService,
+    AssetsService,
+    StockService,
+    SuppliersService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AppGuard },
   ],

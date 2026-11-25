@@ -4,6 +4,11 @@
  */
 import { z } from "zod";
 
+// حقل غائب كلياً يُعرض كـ"مطلوب" بدل رسالة zod الإنجليزية العامة؛ ونوع خاطئ كـ"قيمة غير صالحة"
+z.config({
+  customError: (iss) => (iss.code === "invalid_type" ? (iss.input === undefined || iss.input === null ? "errors.required" : "errors.invalidChoice") : undefined),
+});
+
 const req = (s: z.ZodString) => s.trim().min(1, "errors.required");
 const optionalText = z.string().trim().max(300, "errors.tooLong").optional().or(z.literal(""));
 
@@ -157,3 +162,130 @@ export const userOverridesSchema = z.object({
   overrides: z.array(z.object({ permission: z.string().min(3), granted: z.boolean() })).max(300),
 });
 export type UserOverridesInput = z.infer<typeof userOverridesSchema>;
+
+// =====================================================================
+// المرحلة 4: التصنيفات، القوائم، الممتلكات، المخزون، الموردون
+// =====================================================================
+const code = req(z.string()).max(30, "errors.tooLong").regex(/^[A-Za-z0-9_-]+$/, "errors.codeChars");
+const optId = z.string().uuid("errors.required").optional().or(z.literal("")).nullable();
+const isoDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "errors.date")
+  .optional()
+  .or(z.literal(""))
+  .nullable();
+const qty = z
+  .number({ error: "errors.number" })
+  .positive("errors.positive")
+  .max(1_000_000_000, "errors.tooLarge")
+  .refine((v) => Math.round(v * 1000) === v * 1000, "errors.decimals3");
+const money = z.number({ error: "errors.number" }).min(0, "errors.nonNegative").max(1_000_000_000, "errors.tooLarge").optional().nullable();
+const reason = req(z.string()).max(300, "errors.tooLong");
+
+export const categorySchema = z.object({
+  code,
+  nameAr: req(z.string()).max(150, "errors.tooLong"),
+  nameFr: optionalText,
+  parentId: optId,
+  isActive: z.boolean().optional(),
+});
+export type CategoryInput = z.infer<typeof categorySchema>;
+
+export const lookupValueSchema = z.object({
+  code,
+  labelAr: req(z.string()).max(150, "errors.tooLong"),
+  labelFr: optionalText,
+  sortOrder: z.number().int().min(0).max(9999).optional(),
+  isActive: z.boolean().optional(),
+});
+export type LookupValueInput = z.infer<typeof lookupValueSchema>;
+
+export const ASSET_STATUSES = ["AVAILABLE", "DAMAGED", "UNDER_REPAIR", "DISPOSED"] as const;
+export const assetSchema = z.object({
+  name: req(z.string()).max(200, "errors.tooLong"),
+  /** فارغ = يُولَّد تلقائياً حسب صيغة المؤسسة */
+  inventoryNumber: z.string().trim().max(40, "errors.tooLong").regex(/^[A-Za-z0-9/_.-]*$/, "errors.codeChars").optional(),
+  categoryId: req(z.string()),
+  assetTypeId: optId,
+  description: z.string().trim().max(1000, "errors.tooLong").optional().or(z.literal("")),
+  trackingMode: z.enum(["INDIVIDUAL", "QUANTITY"]),
+  quantity: z.number().int("errors.integer").min(1, "errors.positive").max(100000, "errors.tooLarge"),
+  serialNumber: optionalText,
+  acquisitionDate: isoDate,
+  fundingSourceId: optId,
+  acquisitionValue: money,
+  supplierId: optId,
+  status: z.enum(["AVAILABLE", "DAMAGED", "UNDER_REPAIR"]),
+  photoDataUrl: z.string().max(3_000_000).optional().nullable(),
+}).refine((v) => v.trackingMode === "QUANTITY" || v.quantity === 1, { message: "errors.individualQty", path: ["quantity"] });
+export type AssetInput = z.infer<typeof assetSchema>;
+
+export const archiveSchema = z.object({ reason });
+
+export const warehouseSchema = z.object({
+  code,
+  name: req(z.string()).max(150, "errors.tooLong"),
+  isActive: z.boolean().optional(),
+});
+export type WarehouseInput = z.infer<typeof warehouseSchema>;
+
+export const stockItemSchema = z.object({
+  code,
+  name: req(z.string()).max(200, "errors.tooLong"),
+  categoryId: optId,
+  unitId: req(z.string()),
+  minQuantity: z.number({ error: "errors.number" }).min(0, "errors.nonNegative").max(1_000_000_000, "errors.tooLarge"),
+  tracksExpiry: z.boolean(),
+  defaultSupplierId: optId,
+  notes: z.string().trim().max(500, "errors.tooLong").optional().or(z.literal("")),
+  isActive: z.boolean().optional(),
+});
+export type StockItemInput = z.infer<typeof stockItemSchema>;
+
+const mvBase = { itemId: req(z.string()), quantity: qty, occurredAt: isoDate, clientOpId: z.string().max(80).optional() };
+export const stockInSchema = z.object({
+  ...mvBase,
+  warehouseId: req(z.string()),
+  unitCost: money,
+  supplierId: optId,
+  expiryDate: isoDate,
+  reason: z.string().trim().max(300, "errors.tooLong").optional().or(z.literal("")),
+});
+/** الصرف: المستفيد أو الغرض إلزامي */
+export const stockOutSchema = z.object({ ...mvBase, warehouseId: req(z.string()), reason });
+export const stockReturnSchema = z.object({ ...mvBase, warehouseId: req(z.string()), reason });
+export const stockTransferSchema = z
+  .object({ ...mvBase, fromWarehouseId: req(z.string()), toWarehouseId: req(z.string()), reason: z.string().trim().max(300).optional().or(z.literal("")) })
+  .refine((v) => v.fromWarehouseId !== v.toWarehouseId, { message: "errors.sameWarehouse", path: ["toWarehouseId"] });
+/** التسوية: الكمية الفعلية المعدودة، والفرق يُسجَّل حركةً (لا تعديل مباشر للرصيد) */
+export const stockAdjustSchema = z.object({
+  itemId: req(z.string()),
+  warehouseId: req(z.string()),
+  countedQuantity: z.number({ error: "errors.number" }).min(0, "errors.nonNegative").max(1_000_000_000).refine((v) => Math.round(v * 1000) === v * 1000, "errors.decimals3"),
+  reason,
+  clientOpId: z.string().max(80).optional(),
+});
+export const stockReverseSchema = z.object({ reason });
+export type StockInInput = z.infer<typeof stockInSchema>;
+export type StockOutInput = z.infer<typeof stockOutSchema>;
+export type StockReturnInput = z.infer<typeof stockReturnSchema>;
+export type StockTransferInput = z.infer<typeof stockTransferSchema>;
+export type StockAdjustInput = z.infer<typeof stockAdjustSchema>;
+
+export const supplierSchema = z.object({
+  name: req(z.string()).max(200, "errors.tooLong"),
+  activityId: optId,
+  phone,
+  email,
+  address: optionalText,
+  ice: z.string().trim().regex(/^\d{15}$/, "errors.ice").optional().or(z.literal("")),
+  notes: z.string().trim().max(1000, "errors.tooLong").optional().or(z.literal("")),
+});
+export type SupplierInput = z.infer<typeof supplierSchema>;
+
+export const inventoryPatternSchema = z.object({
+  inventoryNumberPattern: req(z.string())
+    .max(60, "errors.tooLong")
+    .regex(/^[A-Za-z0-9{}:\-/_.]+$/, "errors.codeChars")
+    .refine((v) => /\{SEQ(?::\d{1,2})?\}/.test(v), "errors.patternSeq"),
+});

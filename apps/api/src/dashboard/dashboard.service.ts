@@ -18,6 +18,17 @@ export const ACTIVITY_KEYS: Record<string, string> = {
   USER_OVERRIDES: "activity.userPermissionsChanged",
   USER_RESET_PASSWORD: "activity.userPasswordReset",
   ACCOUNT_LOCKED: "activity.accountLocked",
+  ASSET_CREATE: "activity.assetCreated",
+  ASSET_UPDATE: "activity.assetUpdated",
+  ASSET_ARCHIVE: "activity.assetArchived",
+  STOCK_ITEM_CREATE: "activity.stockItemCreated",
+  STOCK_IN: "activity.stockIn",
+  STOCK_OUT: "activity.stockOut",
+  STOCK_TRANSFER: "activity.stockTransfer",
+  STOCK_RETURN: "activity.stockReturn",
+  STOCK_ADJUST: "activity.stockAdjust",
+  STOCK_REVERSE: "activity.stockReverse",
+  SUPPLIER_CREATE: "activity.supplierCreated",
 };
 /** عمليات المراجع المشتركة (بلا مؤسسة) التي تظهر في نشاط كل مؤسسة. */
 const SHARED_ACTIONS = ["ACADEMY_CREATE", "DIRECTORATE_CREATE"];
@@ -32,7 +43,7 @@ export class DashboardService {
     const now = new Date();
     const [assets, stockItems, buildings, rooms, facilities, resources, activeLoans, overdueLoans, openMaintenance] = await Promise.all([
       p.asset.count({ where: { schoolId, archivedAt: null, status: { not: "DISPOSED" } } }),
-      p.inventoryItem.count({ where: { schoolId } }),
+      p.inventoryItem.count({ where: { schoolId, isActive: true } }),
       p.building.count({ where: { schoolId, archivedAt: null } }),
       p.room.count({ where: { schoolId, archivedAt: null } }),
       p.facility.count({ where: { schoolId, archivedAt: null } }),
@@ -47,11 +58,13 @@ export class DashboardService {
   async alerts(schoolId: string) {
     const p = this.prisma;
     const stock = await p.$queryRaw<{ low: bigint; out: bigint }[]>`
-      SELECT COUNT(*) FILTER (WHERE t.total <= 0) AS out,
-             COUNT(*) FILTER (WHERE t.total > 0 AND t.total <= t."minQuantity") AS low
-      FROM (SELECT i.id, i."minQuantity", COALESCE(SUM(b.quantity), 0) AS total
+      SELECT COUNT(*) FILTER (WHERE t.total <= 0 AND (t."minQuantity" > 0 OR t.moved)) AS out,
+             COUNT(*) FILTER (WHERE t.total > 0 AND t."minQuantity" > 0 AND t.total <= t."minQuantity") AS low
+      FROM (SELECT i.id, i."minQuantity", COALESCE(SUM(b.quantity), 0) AS total,
+                   EXISTS (SELECT 1 FROM stock_movements m WHERE m."itemId" = i.id) AS moved
             FROM inventory_items i LEFT JOIN stock_balances b ON b."itemId" = i.id
-            WHERE i."schoolId" = ${schoolId}::uuid GROUP BY i.id) t`;
+            WHERE i."schoolId" = ${schoolId}::uuid AND i."isActive" GROUP BY i.id) t`;
+    // نفس قاعدة StockService.levelOf
     const [overdue, urgent, damaged] = await Promise.all([
       p.resourceLoan.count({ where: { schoolId, status: { in: ["ACTIVE", "PARTIALLY_RETURNED"] }, dueAt: { lt: new Date() } } }),
       p.maintenanceRequest.count({

@@ -29,6 +29,9 @@ export const Public = () => SetMetadata(IS_PUBLIC, true);
 export const Perm = (code: string) => SetMetadata(PERMISSION, code);
 /** يتطلب مدير النظام (الأكاديميات والمديريات وإنشاء المؤسسات). */
 export const AdminOnly = () => SetMetadata(ADMIN_ONLY, true);
+export const SCHOOL_SCOPED = "schoolScoped";
+/** يتطلب الوصول إلى المؤسسة فقط دون صلاحية بعينها (قوائم مرجعية تحتاجها كل النماذج). */
+export const SchoolScoped = () => SetMetadata(SCHOOL_SCOPED, true);
 export const ALLOW_PENDING_PASSWORD = "allowPendingPassword";
 /** مسموح به حتى قبل تغيير كلمة المرور المؤقتة (me، تغيير كلمة المرور، الخروج). */
 export const AllowPendingPassword = () => SetMetadata(ALLOW_PENDING_PASSWORD, true);

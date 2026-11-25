@@ -4,8 +4,10 @@
 set -euo pipefail
 : "${TEST_DATABASE_URL:?TEST_DATABASE_URL مطلوب (قاعدة اختبار فقط، ستُمسح محتوياتها)}"
 cd "$(dirname "$0")/../database"
-psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -q -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+# psql لا يقبل معامل ?schema= الخاص بـPrisma
+PSQL_URL="${TEST_DATABASE_URL%%\?*}"
+psql "$PSQL_URL" -v ON_ERROR_STOP=1 -q -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 DATABASE_URL="$TEST_DATABASE_URL" npx prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script \
-  | psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -q
-psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -q -f prisma/sql/constraints.sql
-psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -q -f ../tests/database/constraints.test.sql 2>&1 | grep -E 'PASS|FAIL|ERROR'
+  | psql "$PSQL_URL" -v ON_ERROR_STOP=1 -q
+psql "$PSQL_URL" -v ON_ERROR_STOP=1 -q -f prisma/sql/constraints.sql
+psql "$PSQL_URL" -v ON_ERROR_STOP=1 -q -f ../tests/database/constraints.test.sql 2>&1 | grep -E 'PASS|FAIL|ERROR'

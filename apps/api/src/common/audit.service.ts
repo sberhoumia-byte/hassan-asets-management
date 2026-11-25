@@ -17,9 +17,12 @@ export interface AuditEntry {
 
 const REDACT = /password|token|hash|secret|dataurl/i;
 
-/** يحذف الحقول الحساسة والصور المضمنة قبل الحفظ في سجل التدقيق. */
+/** يحذف الحقول الحساسة والصور المضمنة، ويحوّل التواريخ والأعداد العشرية إلى قيم JSON قبل الحفظ في سجل التدقيق. */
 export function redact(v: unknown): unknown {
   if (Array.isArray(v)) return v.map(redact);
+  if (v instanceof Date) return v.toISOString();
+  if (Prisma.Decimal.isDecimal(v)) return Number(v);
+  if (typeof v === "bigint") return v.toString();
   if (v && typeof v === "object") {
     return Object.fromEntries(
       Object.entries(v as Record<string, unknown>).map(([k, x]) => [k, REDACT.test(k) ? (x ? "[redacted]" : x) : redact(x)]),

@@ -817,7 +817,8 @@ model StockMovement {
   type             StockMovementType
   itemId           String            @db.Uuid
   warehouseId      String            @db.Uuid
-  quantity         Decimal           @db.Decimal(12, 3) // موجبة دائماً؛ الاتجاه من النوع
+  quantity         Decimal           @db.Decimal(12, 3) // موجبة دائماً
+  direction        Int // +1 يزيد الرصيد، -1 ينقصه (يحسم اتجاه التسوية والعكس)
   unitCost         Decimal?          @db.Decimal(12, 2)
   expiryDate       DateTime?         @db.Date
   supplierId       String?           @db.Uuid

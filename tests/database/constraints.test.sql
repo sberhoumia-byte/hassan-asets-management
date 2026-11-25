@@ -8,7 +8,7 @@ INSERT INTO lookup_values (id,"listKey",code,"labelAr") VALUES ('00000000-0000-0
 INSERT INTO warehouses (id,"schoolId",code,name) VALUES ('00000000-0000-0000-0000-000000000005','00000000-0000-0000-0000-000000000003','W1','مخزن اختبار');
 INSERT INTO inventory_items (id,"schoolId",code,name,"unitId","updatedAt") VALUES ('00000000-0000-0000-0000-000000000006','00000000-0000-0000-0000-000000000003','I1','مادة اختبار','00000000-0000-0000-0000-000000000004',now());
 INSERT INTO stock_balances ("itemId","warehouseId",quantity,"updatedAt") VALUES ('00000000-0000-0000-0000-000000000006','00000000-0000-0000-0000-000000000005',5,now());
-INSERT INTO stock_movements (id,"schoolId",number,type,"itemId","warehouseId",quantity,"createdById") VALUES ('00000000-0000-0000-0000-000000000007','00000000-0000-0000-0000-000000000003','M1','IN','00000000-0000-0000-0000-000000000006','00000000-0000-0000-0000-000000000005',5,'00000000-0000-0000-0000-0000000000aa');
+INSERT INTO stock_movements (id,"schoolId",number,type,"itemId","warehouseId",quantity,direction,"createdById") VALUES ('00000000-0000-0000-0000-000000000007','00000000-0000-0000-0000-000000000003','M1','IN','00000000-0000-0000-0000-000000000006','00000000-0000-0000-0000-000000000005',5,1,'00000000-0000-0000-0000-0000000000aa');
 INSERT INTO staff_members (id,"schoolId","fullNameAr","updatedAt") VALUES ('00000000-0000-0000-0000-000000000008','00000000-0000-0000-0000-000000000003','أستاذ اختبار',now());
 INSERT INTO educational_resources (id,"schoolId",code,name,"trackingMode","updatedAt") VALUES ('00000000-0000-0000-0000-000000000009','00000000-0000-0000-0000-000000000003','R1','جهاز عرض','INDIVIDUAL',now());
 INSERT INTO educational_resource_units (id,"resourceId","inventoryNumber","updatedAt") VALUES ('00000000-0000-0000-0000-00000000000a','00000000-0000-0000-0000-000000000009','U1',now());
@@ -24,6 +24,7 @@ END; $$ LANGUAGE plpgsql;
 SELECT expect_fail($$UPDATE stock_balances SET quantity = -1$$, 'رصيد سالب ممنوع');
 SELECT expect_fail($$UPDATE stock_movements SET quantity = 99$$, 'تعديل حركة مخزون ممنوع');
 SELECT expect_fail($$DELETE FROM stock_movements$$, 'حذف حركة مخزون ممنوع');
+SELECT expect_fail($$INSERT INTO stock_movements (id,"schoolId",number,type,"itemId","warehouseId",quantity,direction,"createdById") VALUES (gen_random_uuid(),'00000000-0000-0000-0000-000000000003','M2','IN','00000000-0000-0000-0000-000000000006','00000000-0000-0000-0000-000000000005',1,0,'00000000-0000-0000-0000-0000000000aa')$$, 'اتجاه حركة غير +1/-1 مرفوض');
 SELECT expect_fail($$DELETE FROM audit_logs$$, 'حذف سجل التدقيق ممنوع');
 SELECT expect_fail($$UPDATE audit_logs SET action='X'$$, 'تعديل سجل التدقيق ممنوع');
 SELECT expect_fail($$INSERT INTO resource_loans (id,"schoolId",number,"resourceId","unitId","borrowerStaffId","dueAt","handedOverById","updatedAt") VALUES (gen_random_uuid(),'00000000-0000-0000-0000-000000000003','L2','00000000-0000-0000-0000-000000000009','00000000-0000-0000-0000-00000000000a','00000000-0000-0000-0000-000000000008',now()+interval '1 day','00000000-0000-0000-0000-0000000000aa',now())$$, 'إعارة وحدة معارة ممنوعة');

@@ -62,6 +62,10 @@ export class StorageService {
     });
   }
 
+  sha(buf: Buffer) {
+    return createHash("sha256").update(buf).digest("hex");
+  }
+
   async read(storageKey: string): Promise<Buffer> {
     const path = resolve(this.root(), storageKey);
     if (!path.startsWith(this.root())) throw E.notFound();

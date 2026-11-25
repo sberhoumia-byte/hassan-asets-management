@@ -3,7 +3,7 @@ import { Reflector } from "@nestjs/core";
 import { JwtService } from "@nestjs/jwt";
 import { PrismaService } from "../prisma/prisma.service";
 import { config } from "../config";
-import { ADMIN_ONLY, ALLOW_PENDING_PASSWORD, IS_PUBLIC, PERMISSION, type AppRequest } from "../common/context";
+import { ADMIN_ONLY, ALLOW_PENDING_PASSWORD, IS_PUBLIC, PERMISSION, SCHOOL_SCOPED, type AppRequest } from "../common/context";
 import { AppError, E } from "../common/errors";
 import { AccessService } from "./access.service";
 
@@ -58,13 +58,14 @@ export class AppGuard implements CanActivate {
     if (this.reflector.getAllAndOverride<boolean>(ADMIN_ONLY, targets) && !isSystemAdmin) throw E.forbidden("system.admin");
 
     const perm = this.reflector.getAllAndOverride<string>(PERMISSION, targets);
-    if (perm) {
+    const scoped = this.reflector.getAllAndOverride<boolean>(SCHOOL_SCOPED, targets);
+    if (perm || scoped) {
       // المؤسسة من مسار الطلب (/schools/:schoolId/...) وإلا من ترويسة X-School-Id
       const schoolId = String(req.params?.schoolId ?? req.headers["x-school-id"] ?? "");
       if (!UUID.test(schoolId)) throw E.validation({ fields: { "X-School-Id": "errors.required" } });
       if (!(await this.access.canAccessSchool(req.user.id, schoolId))) throw E.schoolDenied();
       const perms = await this.access.permissions(req.user.id, schoolId);
-      if (!perms.has(perm)) throw E.forbidden(perm);
+      if (perm && !perms.has(perm)) throw E.forbidden(perm);
       req.schoolId = schoolId;
       req.permissions = perms;
     }
