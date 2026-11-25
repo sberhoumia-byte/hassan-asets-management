@@ -252,27 +252,56 @@
 ### 3.15 المخطط التفاعلي
 `/floor-plans` CRUD، `POST /floor-plans/:id/background` (صورة أو PDF)، `PUT /floor-plans/:id/shapes` (حفظ الأشكال وربطها)، `GET /floor-plans/:id/status` (ألوان حسب الحالة والأعطاب).
 
-### 3.16 الاستيراد والتصدير
-| الطريقة | المسار | الوصف |
-|---|---|---|
-| GET | `/imports/templates/:entity.xlsx` | نموذج Excel |
-| POST | `/imports` | رفع الملف → `ImportJob` |
-| PUT | `/imports/:id/mapping` | ربط الأعمدة |
-| POST | `/imports/:id/validate` | → المقبول/المرفوض + تقرير الأخطاء (بدون كتابة) |
-| GET | `/imports/:id/errors.xlsx` | تقرير الأخطاء |
-| POST | `/imports/:id/commit` | الكتابة النهائية في معاملة واحدة + تدقيق |
-| GET | `/exports/:entity.xlsx?…filters` | تصدير الكل / نتائج البحث / فترة / تصنيف / موقع |
+### 3.16 الاستيراد ✅ (التصدير عبر التقارير 3.18)
+الكيانات: `ASSETS`، `STAFF`، `SUPPLIERS`، `STOCK` (بطاقات المواد فقط، بلا أرصدة). كل المسارات تحت `/schools/:schoolId/imports`.
 
-### 3.17 الوثائق
-`/documents` CRUD، `POST /documents/:id/versions` (multipart)، `GET /documents/:id/versions/:v/download` (رابط موقّع قصير الأجل)، `PUT /documents/:id/links`.
+| الطريقة | المسار | الصلاحية | الوصف |
+|---|---|---|---|
+| GET | `/entities` | `imports.view` | الكيانات وأعمدتها، و`allowed` حسب صلاحية الكيان المستهدف |
+| GET | `/templates/:entity?lang=ar\|fr` | `imports.view` | قالب xlsx: البيانات (عناوين فقط)، القوائم (قيم المؤسسة الفعلية)، التعليمات |
+| GET | `/` | `imports.view` | آخر 50 مهمة |
+| GET | `/:id` | `imports.view` | المهمة: العناوين، المطابقة، الأعمدة الإلزامية الناقصة، أول 200 خطأ |
+| POST | `/` | `imports.create` + إضافة الكيان | `{entity, fileName, dataBase64}` ← حفظ الملف (توقيع xlsx حقيقي، 5MB، 2000 سطر) + مطابقة تلقائية |
+| POST | `/:id/validate` | `imports.create` + إضافة الكيان | `{mapping?: {field: columnIndex\|null}}` ← المقبول/المرفوض والأخطاء `{row, field, code, value}`؛ **بلا كتابة** |
+| GET | `/:id/errors.xlsx?lang=` | `imports.view` | الأسطر المرفوضة كما هي مع عمود الشرح |
+| POST | `/:id/commit` | `imports.create` + إضافة الكيان | `{acceptPartial?}` ← إعادة التحقق ثم الإنشاء في معاملة واحدة + تدقيق لكل سطر و`IMPORT_COMMIT` |
+| POST | `/:id/cancel` | `imports.create` | إلغاء مهمة لم تُعتمد |
 
-### 3.18 التقارير
-`GET /reports` (الكتالوج)، `POST /reports/:key/preview` → HTML للمعاينة، `POST /reports/:key/pdf`، `POST /reports/:key/xlsx`، `/report-templates` (النماذج المفضلة، مع `letterheadId` اختياري 🔒 `reports.choose_letterhead`).
+أخطاء: `IMPORT_EMPTY`، `IMPORT_TOO_MANY_ROWS {rows,max}`، `IMPORT_MAPPING_REQUIRED {fields}`، `IMPORT_STATE`، `IMPORT_STALE` (409: تغيرت البيانات منذ التحقق)، `IMPORT_NOTHING`، `IMPORT_HAS_ERRORS {rejected}`.
 
-مفاتيح التقارير: `ASSETS, EQUIPMENT, STOCK, STOCK_MOVEMENTS, STOCK_LOW, SPACES, FACILITIES, RESOURCES, LOANS, LOANS_OVERDUE, RETURNS, MAINTENANCE, PURCHASING, SUPPLIERS, CUSTODY, INVENTORY, DISCREPANCIES, ANNUAL`.
+### 3.17 الوثائق ✅
+تحت `/schools/:schoolId/documents`. الملف PDF أو PNG أو JPEG (8MB) بـ base64 في JSON، والنوع يُحدد من التوقيع.
+
+| الطريقة | المسار | الصلاحية | الوصف |
+|---|---|---|---|
+| GET | `/?q&categoryId&archived=1&entityType&entityId` | `documents.view` | القائمة (المقيدة تظهر فقط لمن يملك `documents.update`) |
+| GET | `/:id` | `documents.view` | التفاصيل، الروابط بتسمياتها، الإصدارات |
+| POST | `/` | `documents.create` | `{title, categoryId?, documentDate?, issuingBody?, expiresAt?, notes?, accessLevel, links[], fileName, dataBase64}` ← الإصدار 1 |
+| PUT | `/:id` | `documents.update` | البيانات والروابط (الفرق في سجل التدقيق) |
+| POST | `/:id/versions` | `documents.update` | `{fileName, dataBase64, changeNote}` ← إصدار جديد |
+| GET | `/:id/versions/:versionId/download` | `documents.view` | الملف بعد التحقق من البصمة |
+| POST | `/:id/archive` · `/:id/restore` | `documents.archive` | أرشفة بسبب / استرجاع. **لا مسار للحذف** |
+
+أنواع الروابط: `ASSET, SUPPLIER, PURCHASE_ORDER, MAINTENANCE_REQUEST, ROOM, FACILITY` (من نفس المؤسسة). أخطاء: `DOCUMENT_ARCHIVED`، `DOCUMENT_VERSION_CONFLICT`، `FILE_INTEGRITY`، `FILE_MISSING`.
+
+### 3.18 التقارير ✅
+تحت `/schools/:schoolId`:
+
+| الطريقة | المسار | الصلاحية | الوصف |
+|---|---|---|---|
+| GET | `/reports` | `reports.view` | الكتالوج حسب صلاحيات المستخدم (المرشحات والحالات المقبولة لكل تقرير) |
+| POST | `/reports/:key/preview` | `reports.view` | `{lang, filters}` ← `{html, rowCount}` |
+| POST | `/reports/:key/pdf` | `reports.print` | PDF مؤرشف؛ الترويسات `X-Report-Id`، `X-Report-Number`، `X-Report-Pages` |
+| POST | `/reports/:key/xlsx` | `reports.export` | Excel مؤرشف |
+| GET | `/report-archive?key&q&page&pageSize` | `reports.view` | الأرشيف (التقارير التي يحق للمستخدم رؤيتها فقط) |
+| GET | `/report-archive/:id/download` | `reports.view` | إعادة التنزيل بعد التحقق من البصمة |
+| POST | `/loans/:id/receipt.pdf`، `/custody/:id/report.pdf`، `/inventory-sessions/:id/report.pdf` | `reports.print` + صلاحية الوحدة | الوصل والمحاضر PDF من الخادم، مؤرشفة |
+
+مفاتيح التقارير المنجزة: `ASSETS, STOCK, STOCK_MOVEMENTS, STOCK_LOW, SPACES, FACILITIES, RESOURCES, LOANS, LOANS_OVERDUE, RETURNS, MAINTENANCE, PURCHASING, SUPPLIERS, CUSTODY, INVENTORY, DISCREPANCIES, ANNUAL` (`ANNUAL` يتطلب أيضاً `dashboard.view`). المرشحات: `q, from, to, status, categoryId, roomId, warehouseId, supplierId, sessionId, year, includeArchived`. أخطاء: `REPORT_TOO_LARGE {max}`، `PDF_ENGINE_UNAVAILABLE` (503).
+غير منجز: `/report-templates` واختيار الترويسة لكل تقرير (`reports.choose_letterhead`)، والمفتاح `EQUIPMENT`.
 
 ### 3.19 لوحة القيادة والإشعارات والتدقيق
-`GET /dashboard/stats`, `/dashboard/charts?range=`, `/dashboard/alerts`, `/dashboard/activity` — كلها محسوبة من القاعدة.
+`GET /dashboard/stats`, `/dashboard/charts` (✅ 12 شهراً، `dashboard.view`), `/dashboard/alerts`, `/dashboard/activity` — كلها محسوبة من القاعدة.
 `GET /notifications`, `POST /notifications/:id/read`, `PUT /notifications/preferences`.
 `GET /audit-logs` 🔒 `audit.view` (قراءة فقط، لا مسار للتعديل أو الحذف).
 

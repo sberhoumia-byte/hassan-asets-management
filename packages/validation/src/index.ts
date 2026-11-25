@@ -636,3 +636,31 @@ export const reportRequestSchema = z.object({
   filters: reportFiltersSchema.default({}),
 });
 export type ReportRequest = z.infer<typeof reportRequestSchema>;
+
+// =====================================================================
+// المرحلة 7: الوثائق المرفوعة (إصدارات، ربط بالكيانات، أرشفة بلا حذف)
+// =====================================================================
+export const DOCUMENT_LINK_TYPES = ["ASSET", "SUPPLIER", "PURCHASE_ORDER", "MAINTENANCE_REQUEST", "ROOM", "FACILITY"] as const;
+export const DOCUMENT_MAX_BYTES = 8 * 1024 * 1024;
+const fileBody = {
+  fileName: req(z.string()).max(200, "errors.tooLong"),
+  // 8MB بعد base64 ≈ 10.7MB
+  dataBase64: req(z.string()).max(11_000_000, "errors.fileTooLarge").regex(/^[A-Za-z0-9+/=\s]+$/, "errors.fileType"),
+};
+export const documentMetaSchema = z
+  .object({
+    title: req(z.string()).max(200, "errors.tooLong"),
+    categoryId: optId,
+    documentDate: isoDate,
+    issuingBody: optionalText,
+    expiresAt: isoDate,
+    notes: z.string().trim().max(2000, "errors.tooLong").optional().or(z.literal("")),
+    accessLevel: z.enum(["SCHOOL", "RESTRICTED"]).default("SCHOOL"),
+    links: z.array(z.object({ entityType: z.enum(DOCUMENT_LINK_TYPES), entityId: z.string().uuid("errors.invalidChoice") })).max(20).default([]),
+  })
+  .refine((v) => !v.documentDate || !v.expiresAt || v.documentDate <= v.expiresAt, { path: ["expiresAt"], message: "errors.endBeforeStart" });
+export type DocumentMetaInput = z.infer<typeof documentMetaSchema>;
+export const documentCreateSchema = z.intersection(documentMetaSchema, z.object(fileBody));
+export type DocumentCreateInput = z.infer<typeof documentCreateSchema>;
+export const documentVersionSchema = z.object({ ...fileBody, changeNote: req(z.string()).max(300, "errors.tooLong") });
+export type DocumentVersionInput = z.infer<typeof documentVersionSchema>;

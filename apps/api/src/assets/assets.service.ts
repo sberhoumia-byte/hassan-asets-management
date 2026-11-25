@@ -111,7 +111,7 @@ export class AssetsService {
     await this.staff.assertStaff(schoolId, input.responsibleStaffId, "responsibleStaffId");
   }
 
-  private data(input: AssetInput) {
+  data(input: AssetInput) {
     const t = nullify({
       description: input.description,
       serialNumber: input.serialNumber,

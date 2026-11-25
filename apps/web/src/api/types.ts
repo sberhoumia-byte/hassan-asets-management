@@ -15,6 +15,7 @@ import type {
 import type { AssetsApi, CatalogApi, LoansApi, ResourcesApi, SpacesApi, StaffApi, StockApi, SuppliersApi } from "./phase4";
 import type { CustodyApi, InventoryApi, MaintenanceApi, PurchasingApi } from "./phase6";
 import type { ReportsApi } from "./phase7";
+import type { DocumentsApi, ImportsApi } from "./phase7b";
 
 export type RoleCode =
   | "ADMIN"
@@ -183,4 +184,6 @@ export interface Api {
   readonly purchasing?: PurchasingApi;
   // المرحلة 7 (الخادم فقط)
   readonly reports?: ReportsApi;
+  readonly imports?: ImportsApi;
+  readonly documents?: DocumentsApi;
 }

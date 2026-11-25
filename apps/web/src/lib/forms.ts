@@ -78,6 +78,15 @@ const RULES: Record<string, string> = {
   PDF_ENGINE_UNAVAILABLE: "errors.pdfEngine",
   FILE_INTEGRITY: "errors.fileIntegrity",
   FILE_MISSING: "errors.fileMissing",
+  IMPORT_EMPTY: "errors.importEmpty",
+  IMPORT_TOO_MANY_ROWS: "errors.importTooManyRows",
+  IMPORT_STATE: "errors.importState",
+  IMPORT_MAPPING_REQUIRED: "errors.importMapping",
+  IMPORT_STALE: "errors.importStale",
+  IMPORT_NOTHING: "errors.importNothing",
+  IMPORT_HAS_ERRORS: "errors.importHasErrors",
+  DOCUMENT_ARCHIVED: "errors.documentArchived",
+  DOCUMENT_VERSION_CONFLICT: "errors.documentVersionConflict",
 };
 
 /** مفتاح ومتغيرات رسالة خطأ عام (غير مرتبط بحقل). */

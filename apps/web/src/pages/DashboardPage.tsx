@@ -38,8 +38,8 @@ const QUICK: { key: string; phase: number; to?: string; perm?: string }[] = [
   { key: "newReturn", phase: 5, to: "/loans", perm: "loans.update" },
   { key: "newInventory", phase: 6, to: "/inventory?new=1", perm: "inventory.create" },
   { key: "newMaintenance", phase: 6, to: "/maintenance?new=1", perm: "maintenance.create" },
-  { key: "newReport", phase: 7 },
-  { key: "importExcel", phase: 7 },
+  { key: "newReport", phase: 7, to: "/reports", perm: "reports.view" },
+  { key: "importExcel", phase: 7, to: "/imports", perm: "imports.create" },
 ];
 
 

@@ -46,7 +46,7 @@ export class StaffService {
       );
   }
 
-  private data(i: StaffInput) {
+  data(i: StaffInput) {
     return { fullNameAr: i.fullNameAr.trim(), type: i.type, ...nullify({ fullNameFr: i.fullNameFr, staffNumber: i.staffNumber, phone: i.phone, email: i.email }) };
   }
 

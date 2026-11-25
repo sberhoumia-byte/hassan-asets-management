@@ -40,7 +40,7 @@ export class SuppliersService {
       );
   }
 
-  private async data(schoolId: string, input: SupplierInput) {
+  async data(schoolId: string, input: SupplierInput) {
     await this.catalog.assertLookup(schoolId, "SUPPLIER_ACTIVITY", input.activityId || null, "activityId");
     const t = nullify({ phone: input.phone, email: input.email, address: input.address, ice: input.ice, notes: input.notes, activityId: input.activityId ?? "" });
     return { name: input.name.trim(), ...t };

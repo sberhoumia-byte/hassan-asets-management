@@ -86,7 +86,7 @@ export class StockService {
     await this.catalog.assertSupplier(schoolId, input.defaultSupplierId || null, "defaultSupplierId");
   }
 
-  private itemData(input: StockItemInput) {
+  itemData(input: StockItemInput) {
     const t = nullify({ notes: input.notes, categoryId: input.categoryId ?? "", defaultSupplierId: input.defaultSupplierId ?? "" });
     return { code: input.code, name: input.name.trim(), unitId: input.unitId, minQuantity: D(input.minQuantity), tracksExpiry: input.tracksExpiry, ...t };
   }

@@ -30,6 +30,8 @@ import type { CustodyApi, InventoryApi, MaintenanceApi, PurchasingApi } from "..
 import { HttpCustodyApi, HttpInventoryApi, HttpMaintenanceApi, HttpPurchasingApi } from "./phase6Http";
 import type { GeneratedDownload, ReportsApi } from "../phase7";
 import { HttpReportsApi } from "./phase7Http";
+import type { DocumentsApi, ImportsApi } from "../phase7b";
+import { HttpDocumentsApi, HttpImportsApi } from "./phase7bHttp";
 
 type Method = "GET" | "POST" | "PUT" | "DELETE";
 interface Opts {
@@ -38,6 +40,14 @@ interface Opts {
   schoolId?: string; // ترويسة X-School-Id
   retry?: boolean;
 }
+
+const safeDecode = (v: string) => {
+  try {
+    return decodeURIComponent(v);
+  } catch {
+    return undefined;
+  }
+};
 
 /** رموز الخادم التي تقابلها رموز مختلفة في الشاشات (المكتوبة مع ReviewApi). */
 const CODE_ALIASES: Record<string, string> = { WRONG_PASSWORD: "INVALID_CREDENTIALS" };
@@ -60,6 +70,8 @@ export class HttpApi implements Api {
   readonly inventory: InventoryApi;
   readonly purchasing: PurchasingApi;
   readonly reports: ReportsApi;
+  readonly imports: ImportsApi;
+  readonly documents: DocumentsApi;
 
   constructor(private base = "/api/v1") {
     this.users = new HttpUsersApi(this);
@@ -76,12 +88,15 @@ export class HttpApi implements Api {
     this.inventory = new HttpInventoryApi(this);
     this.purchasing = new HttpPurchasingApi(this);
     this.reports = new HttpReportsApi(this);
+    this.imports = new HttpImportsApi(this);
+    this.documents = new HttpDocumentsApi(this);
   }
 
   /** طلب يعيد ملفاً (PDF/Excel) مع رقم الأرشيف من الترويسات؛ الأخطاء تبقى JSON كالمعتاد. */
   async requestFile(method: Method, path: string, o: Opts = {}): Promise<GeneratedDownload> {
     const url = new URL(this.base + path, window.location.origin);
-    const headers: Record<string, string> = { Accept: "application/pdf, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/json" };
+    for (const [k, v] of Object.entries(o.query ?? {})) if (v !== undefined && v !== "") url.searchParams.set(k, String(v));
+    const headers: Record<string, string> = { Accept: "application/pdf, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, image/png, image/jpeg, application/json" };
     if (o.body !== undefined) headers["Content-Type"] = "application/json";
     if (this.accessToken) headers.Authorization = `Bearer ${this.accessToken}`;
     let res: Response;
@@ -99,7 +114,8 @@ export class HttpApi implements Api {
       throw new ApiError((data?.error?.code as string | undefined) ?? "HTTP_" + res.status, data?.error?.details);
     }
     const disp = res.headers.get("Content-Disposition") ?? "";
-    const filename = /filename="([^"]+)"/.exec(disp)?.[1] ?? "document";
+    const utf8 = /filename\*=UTF-8''([^;]+)/i.exec(disp)?.[1];
+    const filename = (utf8 ? safeDecode(utf8) : undefined) ?? /filename="([^"]+)"/.exec(disp)?.[1] ?? "document";
     const pages = res.headers.get("X-Report-Pages");
     return {
       blob: await res.blob(),

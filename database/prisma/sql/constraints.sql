@@ -67,3 +67,11 @@ ALTER TABLE stock_movements ADD CONSTRAINT stock_movement_direction CHECK (direc
 CREATE TRIGGER generated_reports_append_only
   BEFORE UPDATE OR DELETE ON generated_reports
   FOR EACH ROW EXECUTE FUNCTION forbid_mutation();
+
+-- 11) الوثائق المرفوعة: إصداراتها إلحاق فقط، والوثيقة تُؤرشف ولا تُحذف (المرحلة 7).
+CREATE TRIGGER document_versions_append_only
+  BEFORE UPDATE OR DELETE ON document_versions
+  FOR EACH ROW EXECUTE FUNCTION forbid_mutation();
+CREATE TRIGGER documents_no_delete
+  BEFORE DELETE ON documents
+  FOR EACH ROW EXECUTE FUNCTION forbid_mutation();

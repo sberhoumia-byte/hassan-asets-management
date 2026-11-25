@@ -54,6 +54,9 @@ export const ACTIVITY_KEYS: Record<string, string> = {
   PO_REJECTED: "activity.poRejected",
   PO_DELIVERY: "activity.poDelivered",
   REPORT_GENERATE: "activity.reportGenerated",
+  IMPORT_COMMIT: "activity.importCommitted",
+  DOCUMENT_CREATE: "activity.documentCreated",
+  DOCUMENT_VERSION_ADD: "activity.documentVersion",
 };
 /** عمليات المراجع المشتركة (بلا مؤسسة) التي تظهر في نشاط كل مؤسسة. */
 const SHARED_ACTIONS = ["ACADEMY_CREATE", "DIRECTORATE_CREATE"];
