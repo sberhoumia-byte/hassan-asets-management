@@ -47,6 +47,8 @@ import { FloorPlanService } from "./floorplan/floorplan.service";
 import { FloorPlanController } from "./floorplan/floorplan.controller";
 import { SyncService } from "./sync/sync.service";
 import { SyncController } from "./sync/sync.controller";
+import { BackupService } from "./backup/backup.service";
+import { BackupController } from "./backup/backup.controller";
 import { NotificationsService } from "./notifications/notifications.service";
 import { AuditLogService } from "./notifications/audit-log.service";
 import { NotificationsController } from "./notifications/notifications.controller";
@@ -58,7 +60,7 @@ import { NotificationsController } from "./notifications/notifications.controlle
     // حد عام سخي لكل عنوان؛ مسارات الدخول لها حد أضيق (@Throttle)
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 600 }]),
   ],
-  controllers: [AuthController, HierarchyController, BrandingController, DashboardController, UsersController, HealthController, CatalogController, AssetsController, StockController, SuppliersController, SpacesController, StaffController, ResourcesController, LoansController, MaintenanceController, CustodyController, InventoryController, PurchasingController, ReportsController, ImportsController, DocumentsController, NotificationsController, FloorPlanController, SyncController],
+  controllers: [AuthController, HierarchyController, BrandingController, DashboardController, UsersController, HealthController, CatalogController, AssetsController, StockController, SuppliersController, SpacesController, StaffController, ResourcesController, LoansController, MaintenanceController, CustodyController, InventoryController, PurchasingController, ReportsController, ImportsController, DocumentsController, NotificationsController, FloorPlanController, SyncController, BackupController],
   providers: [
     AuditService,
     AccessService,
@@ -88,6 +90,7 @@ import { NotificationsController } from "./notifications/notifications.controlle
     AuditLogService,
     FloorPlanService,
     SyncService,
+    BackupService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AppGuard },
   ],

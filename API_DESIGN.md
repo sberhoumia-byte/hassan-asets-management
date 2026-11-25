@@ -315,8 +315,8 @@
 `POST /schools/:schoolId/notifications/run` 🔒 `settings.manage` → `{created, active}` (تشغيل يدوي للفحص).
 **سجل التدقيق ✅**: `GET /schools/:schoolId/audit-logs?userId=&action=&entityType=&entityId=&from=&to=&page=&pageSize=` 🔒 `audit.view` → `{total, page, pageSize, items:[{id, at, action, entityType, entityId, user, userId, ip, requestId, before, after}]}` (فترة معكوسة → 400). `GET /audit-logs/facets` → القيم المتاحة للتصفية. قراءة فقط: لا مسار للتعديل أو الحذف (والجدول إلحاق فقط بقادح في القاعدة).
 
-### 3.20 النسخ الاحتياطي
-`GET /backups`، `POST /backups` 🔒، `POST /backups/:id/verify`، `GET /backups/:id/download` 🔒، `POST /backups/:id/restore` 🔒 `backup.restore` + إعادة إدخال كلمة المرور + عبارة تأكيد، `PUT /backups/schedule`.
+### 3.20 النسخ الاحتياطي ✅ (مدير النظام فقط)
+`GET /backups` (القائمة + هل المفتاح مضبوط + ساعة النسخ اليومي + عبارة التأكيد)، `POST /backups` (إنشاء؛ 503 `BACKUP_KEY_MISSING` بلا مفتاح، 409 `BACKUP_BUSY` أثناء عملية أخرى)، `POST /backups/upload` (`application/octet-stream`، حتى 1 GB؛ 422 `BACKUP_DECRYPT_FAILED` لملف معدّل أو بمفتاح آخر)، `POST /backups/:id/verify`، `GET /backups/:id/download`، `POST /backups/:id/restore` `{password, confirm: "استعادة النسخة"}` (401 `WRONG_PASSWORD`، 409 `BACKUP_SCHEMA_MISMATCH`). صيغة الملف `.hbk`: `HBK1` + ملح 16 بايت + IV 12 بايت + نص مشفر AES-256-GCM + وسم 16 بايت؛ داخله `db.dump` و`files.tgz` و`manifest.json`. `PUT /backups/schedule` غير منجز (الموعد عبر `BACKUP_DAILY_HOUR`).
 
 ### 3.21 المزامنة دون اتصال ✅ (جزئياً)
 `POST /schools/:schoolId/sync` `{deviceId, operations:[{clientOpId (UUID), operation, payload, clientCreatedAt}]}` (1 إلى 100) → `{results:[{clientOpId, status: APPLIED|CONFLICT|REJECTED|RECEIVED, error?, details?, resultRef?, replayed?}]}`.

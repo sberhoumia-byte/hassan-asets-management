@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router";
-import { Alert, Drawer } from "@mantine/core";
+import { Alert, Center, Drawer, Loader } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import { IconInfoCircle } from "@tabler/icons-react";
 import { Sidebar } from "./Sidebar";
@@ -62,7 +62,9 @@ export function AppLayout() {
               {t("review.banner")}
             </Alert>
           )}
-          <Outlet />
+          <Suspense fallback={<Center py="xl"><Loader /></Center>}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>

@@ -62,4 +62,5 @@ export const SETTINGS_PAGES = [
   { key: "workflows", to: "/settings/workflows" },
   { key: "notifications", to: "/settings/notifications" },
   { key: "audit", to: "/settings/audit" },
+  { key: "backup", to: "/settings/backup" },
 ] as const;

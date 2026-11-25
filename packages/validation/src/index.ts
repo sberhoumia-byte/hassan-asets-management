@@ -724,3 +724,9 @@ export const syncBatchSchema = z.object({
     .max(100, "errors.tooLong"),
 });
 export type SyncBatchInput = z.infer<typeof syncBatchSchema>;
+
+// =====================================================================
+// المرحلة 9: النسخ الاحتياطي
+// =====================================================================
+export const backupRestoreSchema = z.object({ password: req(z.string()).max(128), confirm: req(z.string()).max(100) });
+export type BackupRestoreInput = z.infer<typeof backupRestoreSchema>;

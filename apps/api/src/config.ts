@@ -26,6 +26,13 @@ const schema = z.object({
     .transform((v) => v === "true"),
   /** مجلد خطوط @fontsource إن لم يكن في node_modules. */
   FONTS_PATH: z.string().optional(),
+  /** النسخ الاحتياطي (المرحلة 9): المجلد، ومفتاح التشفير (16 حرفاً على الأقل؛ دونه يُرفض إنشاء النسخ). */
+  BACKUP_PATH: z.string().default("./backups"),
+  BACKUP_ENCRYPTION_KEY: z.preprocess((v) => (v === "" ? undefined : v), z.string().min(16, "BACKUP_ENCRYPTION_KEY must be at least 16 chars").optional()),
+  /** ساعة النسخ اليومي التلقائي (0-23، بتوقيت الخادم)؛ فارغ = معطل. */
+  BACKUP_DAILY_HOUR: z.preprocess((v) => (v === "" ? undefined : v), z.coerce.number().int().min(0).max(23).optional()),
+  PG_DUMP_PATH: z.string().default("pg_dump"),
+  PG_RESTORE_PATH: z.string().default("pg_restore"),
   COOKIE_SECURE: z
     .string()
     .optional()

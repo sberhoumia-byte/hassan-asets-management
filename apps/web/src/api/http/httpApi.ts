@@ -34,6 +34,8 @@ import type { DocumentsApi, ImportsApi } from "../phase7b";
 import { HttpDocumentsApi, HttpImportsApi } from "./phase7bHttp";
 import type { AuditApi, FloorPlanApi, NotificationsApi, SyncApi } from "../phase8";
 import { HttpAuditApi, HttpFloorPlanApi, HttpNotificationsApi, HttpSyncApi } from "./phase8Http";
+import { HttpBackupsApi } from "./phase9Http";
+import type { BackupsApi } from "../phase9";
 
 type Method = "GET" | "POST" | "PUT" | "DELETE";
 interface Opts {
@@ -41,6 +43,8 @@ interface Opts {
   query?: Record<string, string | number | undefined>;
   schoolId?: string; // ترويسة X-School-Id
   retry?: boolean;
+  /** ملف خام يُرسل كما هو (application/octet-stream) بدل JSON. */
+  raw?: Blob;
 }
 
 const safeDecode = (v: string) => {
@@ -78,6 +82,7 @@ export class HttpApi implements Api {
   readonly audit: AuditApi;
   readonly floorplan: FloorPlanApi;
   readonly sync: SyncApi;
+  readonly backups: BackupsApi;
 
   constructor(private base = "/api/v1") {
     this.users = new HttpUsersApi(this);
@@ -100,13 +105,14 @@ export class HttpApi implements Api {
     this.audit = new HttpAuditApi(this);
     this.floorplan = new HttpFloorPlanApi(this);
     this.sync = new HttpSyncApi(this);
+    this.backups = new HttpBackupsApi(this);
   }
 
   /** طلب يعيد ملفاً (PDF/Excel) مع رقم الأرشيف من الترويسات؛ الأخطاء تبقى JSON كالمعتاد. */
   async requestFile(method: Method, path: string, o: Opts = {}): Promise<GeneratedDownload> {
     const url = new URL(this.base + path, window.location.origin);
     for (const [k, v] of Object.entries(o.query ?? {})) if (v !== undefined && v !== "") url.searchParams.set(k, String(v));
-    const headers: Record<string, string> = { Accept: "application/pdf, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, image/png, image/jpeg, application/json" };
+    const headers: Record<string, string> = { Accept: "application/pdf, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, image/png, image/jpeg, application/octet-stream, application/json" };
     if (o.body !== undefined) headers["Content-Type"] = "application/json";
     if (this.accessToken) headers.Authorization = `Bearer ${this.accessToken}`;
     let res: Response;
@@ -141,6 +147,7 @@ export class HttpApi implements Api {
     for (const [k, v] of Object.entries(o.query ?? {})) if (v !== undefined && v !== "") url.searchParams.set(k, String(v));
     const headers: Record<string, string> = { Accept: "application/json" };
     if (o.body !== undefined) headers["Content-Type"] = "application/json";
+    if (o.raw) headers["Content-Type"] = "application/octet-stream";
     if (this.accessToken) headers.Authorization = `Bearer ${this.accessToken}`;
     if (o.schoolId) headers["X-School-Id"] = o.schoolId;
     let res: Response;
@@ -149,7 +156,7 @@ export class HttpApi implements Api {
         method,
         headers,
         credentials: "include",
-        body: o.body === undefined ? undefined : JSON.stringify(o.body),
+        body: o.raw ?? (o.body === undefined ? undefined : JSON.stringify(o.body)),
       });
     } catch {
       throw new ApiError("NETWORK_ERROR");

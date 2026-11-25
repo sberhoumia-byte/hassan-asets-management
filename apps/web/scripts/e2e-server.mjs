@@ -38,7 +38,7 @@ try {
   execSync("npm run build", { cwd: join(root, "apps/api"), stdio: "inherit" });
   api = spawn("node", ["dist/main.js"], {
     cwd: join(root, "apps/api"),
-    env: { ...env, API_PORT: "3100", WEB_ORIGIN: "http://localhost:4174", STORAGE_PATH: mkdtempSync(join(tmpdir(), "hassan-e2e-")), LOGIN_RATE_LIMIT: "200" },
+    env: { ...env, API_PORT: "3100", WEB_ORIGIN: "http://localhost:4174", STORAGE_PATH: mkdtempSync(join(tmpdir(), "hassan-e2e-")), BACKUP_PATH: mkdtempSync(join(tmpdir(), "hassan-e2e-bk-")), BACKUP_ENCRYPTION_KEY: "e2e-only-backup-key-0123456789", NOTIFY_INTERVAL_MINUTES: "0", LOGIN_RATE_LIMIT: "200" },
     stdio: ["ignore", "ignore", "inherit"],
   });
   for (let i = 0; i < 60; i++) {

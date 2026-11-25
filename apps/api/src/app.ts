@@ -4,7 +4,7 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
-import { json } from "express";
+import { json, raw } from "express";
 import { AppModule } from "./app.module";
 import { ErrorFilter } from "./common/errors";
 import { requestId } from "./common/request-id";
@@ -23,6 +23,8 @@ export async function createApp(opts: { logger?: boolean } = {}) {
   app.use(cookieParser());
   // الصور (الشعار والترويسة) تُرسل كـ data URL داخل JSON: حتى 5MB للترويسة ≈ 7MB base64
   app.use(json({ limit: "12mb" }));
+  // رفع نسخة احتياطية مشفرة (ملف خام) — هذا المسار وحده يقبل الحجم الكبير
+  app.use("/api/v1/backups/upload", raw({ type: "application/octet-stream", limit: "1gb" }));
   app.enableCors({
     origin: c.WEB_ORIGIN.split(",").map((s) => s.trim()),
     credentials: true,

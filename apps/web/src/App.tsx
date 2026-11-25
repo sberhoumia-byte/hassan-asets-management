@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { lazy, useEffect, type ComponentType, type ReactNode } from "react";
 import { DirectionProvider, MantineProvider, Center, Loader, useDirection } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
 import { ModalsProvider } from "@mantine/modals";
@@ -11,41 +11,47 @@ import { AppLayout } from "./layout/AppLayout";
 import { LoginPage } from "./pages/LoginPage";
 import { SetupPage } from "./pages/SetupPage";
 import { DashboardPage } from "./pages/DashboardPage";
-import { SettingsLayout } from "./pages/settings/SettingsLayout";
-import { SchoolInfoPage } from "./pages/settings/SchoolInfoPage";
-import { HierarchyPage } from "./pages/settings/HierarchyPage";
-import { BrandingPage } from "./pages/settings/BrandingPage";
-import { PrintPreviewPage } from "./pages/settings/PrintPreviewPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
-import { UsersPage } from "./pages/UsersPage";
 import { ForcePasswordPage } from "./pages/ForcePasswordPage";
-import { AssetsPage } from "./pages/assets/AssetsPage";
-import { StockPage } from "./pages/stock/StockPage";
-import { SuppliersPage } from "./pages/SuppliersPage";
-import { ScanPage } from "./pages/ScanPage";
-import { CatalogPage } from "./pages/settings/CatalogPage";
-import { StaffPage } from "./pages/settings/StaffPage";
-import { SpacesPage } from "./pages/spaces/SpacesPage";
-import { FacilitiesPage } from "./pages/spaces/FacilitiesPage";
-import { ResourcesPage } from "./pages/resources/ResourcesPage";
-import { LoansPage } from "./pages/loans/LoansPage";
-import { LoanReceiptPage } from "./pages/loans/LoanReceiptPage";
-import { MaintenancePage } from "./pages/maintenance/MaintenancePage";
-import { CustodyPage } from "./pages/custody/CustodyPage";
-import { CustodyReportPage } from "./pages/custody/CustodyReportPage";
-import { InventoryPage } from "./pages/inventory/InventoryPage";
-import { InventorySessionPage } from "./pages/inventory/InventorySessionPage";
-import { InventoryReportPage } from "./pages/inventory/InventoryReportPage";
-import { PurchasingPage } from "./pages/purchasing/PurchasingPage";
-import { PurchaseOrderPage } from "./pages/purchasing/PurchaseOrderPage";
-import { ReportsPage } from "./pages/reports/ReportsPage";
-import { ImportPage } from "./pages/imports/ImportPage";
-import { DocumentsPage } from "./pages/documents/DocumentsPage";
-import { FloorPlanPage } from "./pages/floorplan/FloorPlanPage";
 import { OutboxProvider } from "./offline/OutboxProvider";
-import { NotificationSettingsPage } from "./pages/settings/NotificationSettingsPage";
-import { AuditLogPage } from "./pages/settings/AuditLogPage";
-import { ApprovalWorkflowsPage } from "./pages/settings/ApprovalWorkflowsPage";
+
+/** الصفحات غير الأساسية تُحمّل عند فتحها (تقسيم الحزمة)؛ اللوحة وتسجيل الدخول تبقى في الحزمة الأولى. */
+function lazyPage<K extends string>(load: () => Promise<Record<K, ComponentType>>, name: K) {
+  return lazy(() => load().then((m) => ({ default: m[name] })));
+}
+const SettingsLayout = lazyPage(() => import("./pages/settings/SettingsLayout"), "SettingsLayout");
+const SchoolInfoPage = lazyPage(() => import("./pages/settings/SchoolInfoPage"), "SchoolInfoPage");
+const HierarchyPage = lazyPage(() => import("./pages/settings/HierarchyPage"), "HierarchyPage");
+const BrandingPage = lazyPage(() => import("./pages/settings/BrandingPage"), "BrandingPage");
+const PrintPreviewPage = lazyPage(() => import("./pages/settings/PrintPreviewPage"), "PrintPreviewPage");
+const UsersPage = lazyPage(() => import("./pages/UsersPage"), "UsersPage");
+const AssetsPage = lazyPage(() => import("./pages/assets/AssetsPage"), "AssetsPage");
+const StockPage = lazyPage(() => import("./pages/stock/StockPage"), "StockPage");
+const SuppliersPage = lazyPage(() => import("./pages/SuppliersPage"), "SuppliersPage");
+const ScanPage = lazyPage(() => import("./pages/ScanPage"), "ScanPage");
+const CatalogPage = lazyPage(() => import("./pages/settings/CatalogPage"), "CatalogPage");
+const StaffPage = lazyPage(() => import("./pages/settings/StaffPage"), "StaffPage");
+const SpacesPage = lazyPage(() => import("./pages/spaces/SpacesPage"), "SpacesPage");
+const FacilitiesPage = lazyPage(() => import("./pages/spaces/FacilitiesPage"), "FacilitiesPage");
+const ResourcesPage = lazyPage(() => import("./pages/resources/ResourcesPage"), "ResourcesPage");
+const LoansPage = lazyPage(() => import("./pages/loans/LoansPage"), "LoansPage");
+const LoanReceiptPage = lazyPage(() => import("./pages/loans/LoanReceiptPage"), "LoanReceiptPage");
+const MaintenancePage = lazyPage(() => import("./pages/maintenance/MaintenancePage"), "MaintenancePage");
+const CustodyPage = lazyPage(() => import("./pages/custody/CustodyPage"), "CustodyPage");
+const CustodyReportPage = lazyPage(() => import("./pages/custody/CustodyReportPage"), "CustodyReportPage");
+const InventoryPage = lazyPage(() => import("./pages/inventory/InventoryPage"), "InventoryPage");
+const InventorySessionPage = lazyPage(() => import("./pages/inventory/InventorySessionPage"), "InventorySessionPage");
+const InventoryReportPage = lazyPage(() => import("./pages/inventory/InventoryReportPage"), "InventoryReportPage");
+const PurchasingPage = lazyPage(() => import("./pages/purchasing/PurchasingPage"), "PurchasingPage");
+const PurchaseOrderPage = lazyPage(() => import("./pages/purchasing/PurchaseOrderPage"), "PurchaseOrderPage");
+const ReportsPage = lazyPage(() => import("./pages/reports/ReportsPage"), "ReportsPage");
+const ImportPage = lazyPage(() => import("./pages/imports/ImportPage"), "ImportPage");
+const DocumentsPage = lazyPage(() => import("./pages/documents/DocumentsPage"), "DocumentsPage");
+const FloorPlanPage = lazyPage(() => import("./pages/floorplan/FloorPlanPage"), "FloorPlanPage");
+const NotificationSettingsPage = lazyPage(() => import("./pages/settings/NotificationSettingsPage"), "NotificationSettingsPage");
+const BackupPage = lazyPage(() => import("./pages/settings/BackupPage"), "BackupPage");
+const AuditLogPage = lazyPage(() => import("./pages/settings/AuditLogPage"), "AuditLogPage");
+const ApprovalWorkflowsPage = lazyPage(() => import("./pages/settings/ApprovalWorkflowsPage"), "ApprovalWorkflowsPage");
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
@@ -131,6 +137,7 @@ export function App() {
                         <Route path="workflows" element={<ApprovalWorkflowsPage />} />
                         <Route path="notifications" element={<NotificationSettingsPage />} />
                         <Route path="audit" element={<AuditLogPage />} />
+                        <Route path="backup" element={<BackupPage />} />
                       </Route>
                       <Route path="*" element={<NotFoundPage />} />
                     </Route>

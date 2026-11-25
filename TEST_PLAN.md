@@ -61,7 +61,7 @@ TEST_DATABASE_URL=postgresql://user@localhost:5432/hassan_test ./scripts/test-db
 
 # الوحدة (الواجهة) + تكامل الخادم على PostgreSQL حقيقي
 npm test                  # web: Vitest — api: Vitest + supertest
-npm run test:api          # الخادم وحده (156 اختباراً؛ اختبارات PDF تحتاج poppler-utils وChromium: CHROMIUM_PATH)
+npm run test:api          # الخادم وحده (176 اختباراً؛ اختبارات PDF تحتاج poppler-utils وChromium: CHROMIUM_PATH)
 
 # الواجهة (Playwright)
 npm run test:e2e          # الشاشات على نسخة المراجعة (حاسوب + هاتف)
@@ -72,6 +72,13 @@ npm run test:e2e:server   # المسار الكامل على الخادم الح
 
 ```
 ```
+
+## 4-أ. المرحلة 9: الأمن والأداء والتغطية
+- `apps/api/test/security.test.ts`: مصفوفة على كل المسارات المسجلة في `AppModule` (401 بلا رمز/برمز مزوّر، 403 للدور غير المخوّل ولمسارات مدير النظام، 403 `SCHOOL_ACCESS_DENIED` بين المؤسسات، لا 500 بمعرفات غير موجودة)، ترويسات Helmet، CORS، JSON تالف (400)، جسم كبير (413)، حقن SQL.
+- `apps/api/test/backup.test.ts`: التشفير (لا نص مقروء في الملف)، التحقق، التنزيل والرفع (المعدّل ← 422)، الاستعادة على قاعدة فارغة بنفس عدد السجلات، الاستعادة بالعبارة وكلمة المرور ونسخة الأمان وسجل التدقيق، غياب المفتاح ← 503.
+- `apps/api/test/perf.test.ts`: 5000 أصل و30000 حركة؛ كل مسار رئيسي أقل من 1500 مللي ثانية (المقاس فعلياً أقل من 150).
+- `apps/web/e2e-server/phase9.spec.ts`: إنشاء نسخة، تحقق، تنزيل، كلمة مرور خاطئة، ثم استعادة تُزيل أصلاً أضيف بعد النسخة.
+- التغطية: `npx vitest run --coverage` في `apps/api` (93.3% أسطر، 80.3% فروع) وفي `apps/web` (27% أسطر؛ الشاشات تغطيها E2E).
 
 ## 5. معيار إنهاء كل مرحلة
 1. كل اختبارات المرحلة ناجحة على CI.

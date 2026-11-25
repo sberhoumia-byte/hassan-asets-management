@@ -16,10 +16,16 @@ WORKDIR /app
 ENV NODE_ENV=production
 # محرك PDF (المرحلة 7): Chromium من توزيعة Debian. الخطوط مضمنة في كل وثيقة (حزم @fontsource) فلا حاجة لخطوط النظام.
 # داخل الحاوية يعمل Chromium دون sandbox (مستخدم غير root، JavaScript معطل، لا شبكة، مصادر data: فقط).
-RUN apt-get update && apt-get install -y --no-install-recommends chromium && rm -rf /var/lib/apt/lists/*
+# النسخ الاحتياطي (المرحلة 9): pg_dump/pg_restore بنفس إصدار الخادم (16) من مستودع PostgreSQL الرسمي، وtar.
+RUN apt-get update && apt-get install -y --no-install-recommends chromium ca-certificates curl gnupg \
+  && install -d /usr/share/postgresql-common/pgdg \
+  && curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+  && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+  && apt-get update && apt-get install -y --no-install-recommends postgresql-client-16 \
+  && apt-get purge -y curl gnupg && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
 ENV CHROMIUM_PATH=/usr/bin/chromium PDF_NO_SANDBOX=true
 COPY --from=build /app /app
-RUN mkdir -p /data/storage && chown -R node:node /data
+RUN mkdir -p /data/storage /data/backups && chown -R node:node /data
 USER node
 EXPOSE 3000
 # عند كل تشغيل: تطبيق الهجرات الجديدة (غير هدّام) + بيانات الأساس (idempotent، لا تنشئ مستخدمين) ثم الخادم

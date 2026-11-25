@@ -33,8 +33,13 @@ services:
       SETUP_TOKEN: ${SETUP_TOKEN:-}
       # على شبكة محلية بلا HTTPS يجب false وإلا لن يحفظ المتصفح كوكي الجلسة. مع HTTPS: true
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      # النسخ الاحتياطي: بدون المفتاح لا تُنشأ نسخ. احفظ المفتاح خارج الخادم: دونه لا تُفتح النسخ.
+      BACKUP_PATH: /data/backups
+      BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY:-}
+      BACKUP_DAILY_HOUR: ${BACKUP_DAILY_HOUR:-}
     volumes:
       - storage:/data/storage
+      - backups:/data/backups
 
   web:
     build: { context: .., dockerfile: docker/Dockerfile.web }
@@ -46,3 +51,4 @@ services:
 volumes:
   pgdata:
   storage:
+  backups:

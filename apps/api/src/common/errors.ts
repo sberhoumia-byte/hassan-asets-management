@@ -53,6 +53,12 @@ export class ErrorFilter implements ExceptionFilter {
         status === 400 ? "VALIDATION_ERROR" : status === 404 ? "NOT_FOUND" : status === 413 ? "PAYLOAD_TOO_LARGE" : status === 429 ? "TOO_MANY_REQUESTS" : "HTTP_ERROR";
       return res.status(status).json({ error: { code, requestId } });
     }
+    // أخطاء body-parser (جسم كبير/JSON تالف) ليست HttpException لكنها تحمل status
+    const bp = err as { status?: number; statusCode?: number; type?: string };
+    const bpStatus = bp?.status ?? bp?.statusCode;
+    if (typeof bp?.type === "string" && (bpStatus === 413 || bpStatus === 400)) {
+      return res.status(bpStatus).json({ error: { code: bpStatus === 413 ? "PAYLOAD_TOO_LARGE" : "VALIDATION_ERROR", requestId } });
+    }
     this.log.error(err instanceof Error ? err.stack : String(err));
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ error: { code: "INTERNAL", requestId } });
   }

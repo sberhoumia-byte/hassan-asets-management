@@ -51,5 +51,20 @@ export default defineConfig(({ mode }) => ({
   build:
     mode === "review"
       ? { target: "es2022", outDir: "dist-review", assetsInlineLimit: 100_000_000 }
-      : { target: "es2022", sourcemap: true },
+      : {
+          target: "es2022",
+          sourcemap: true,
+          // مكتبات الأساس في حزم مستقلة تبقى في ذاكرة المتصفح بين الإصدارات
+          rollupOptions: {
+            output: {
+              manualChunks(id: string) {
+                if (!id.includes("node_modules")) return undefined;
+                if (/node_modules\/(react|react-dom|scheduler|react-router)\//.test(id)) return "vendor-react";
+                if (/node_modules\/(@mantine|@floating-ui|react-transition-group|react-remove-scroll|@tabler)\//.test(id)) return "vendor-ui";
+                if (/node_modules\/(zod|react-hook-form|@hookform|@tanstack)\//.test(id)) return "vendor-data";
+                return undefined;
+              },
+            },
+          },
+        },
 }));
