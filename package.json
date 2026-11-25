@@ -1,6 +1,6 @@
 {
   "name": "hassan-assets-management",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "HASSAN IBN THABIT – ASSETS MANAGEMENT SYSTEM | نظام التدبير المادي",
   "workspaces": [
@@ -16,11 +16,14 @@
     "db:generate": "npm run generate -w @hassan/database",
     "db:migrate": "npm run migrate:dev -w @hassan/database",
     "db:seed:test": "npm run seed:test -w @hassan/database",
-    "dev:web": "echo \"[المرحلة 2] لم يُنشأ تطبيق الويب بعد\" && exit 1",
+    "dev:web": "npm run dev -w @hassan/web",
     "dev:api": "echo \"[المرحلة 3] لم يُنشأ الخادم بعد\" && exit 1",
-    "build:web": "echo \"[المرحلة 10] أمر البناء لم يُربط بعد\" && exit 1",
+    "build:web": "npm run build -w @hassan/web",
     "build:android": "echo \"[المرحلة 10] أمر البناء لم يُربط بعد\" && exit 1",
     "build:windows": "echo \"[المرحلة 10] أمر البناء لم يُربط بعد\" && exit 1",
-    "test": "echo \"[المرحلة 3+] لا توجد اختبارات بعد\" && exit 1"
+    "test": "npm test -w @hassan/web",
+    "build:review": "npm run build:review -w @hassan/web",
+    "test:e2e": "npm run test:e2e -w @hassan/web",
+    "typecheck": "npm run typecheck -w @hassan/web"
   }
 }

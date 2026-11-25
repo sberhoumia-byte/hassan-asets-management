@@ -12,3 +12,6 @@ backups/
 .DS_Store
 apps/android/app/build/
 apps/desktop/out/
+dist-review/
+apps/web/test-results/
+apps/web/playwright-report/
