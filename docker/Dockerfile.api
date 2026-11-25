@@ -1,0 +1,22 @@
+# خادم API (NestJS) + أدوات الهجرة. يُبنى من جذر المستودع: docker build -f docker/Dockerfile.api .
+FROM node:22-bookworm-slim AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY apps/api/package.json apps/api/
+COPY apps/web/package.json apps/web/
+COPY packages/ packages/
+COPY database/package.json database/
+RUN npm ci --workspaces --include-workspace-root --ignore-scripts && npm rebuild argon2
+COPY database/ database/
+COPY apps/api/ apps/api/
+RUN npm run generate -w @hassan/database && npm run build -w @hassan/api
+
+FROM node:22-bookworm-slim
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=build /app /app
+RUN mkdir -p /data/storage && chown -R node:node /data
+USER node
+EXPOSE 3000
+# عند كل تشغيل: تطبيق الهجرات الجديدة (غير هدّام) + بيانات الأساس (idempotent، لا تنشئ مستخدمين) ثم الخادم
+CMD ["sh", "-c", "cd /app/database && npx prisma migrate deploy && npx tsx seeds/seed.ts && cd /app/apps/api && node dist/main.js"]

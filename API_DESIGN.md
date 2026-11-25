@@ -65,44 +65,65 @@
 
 الرمز 🔒 = يتطلب صلاحية خاصة. كل المسارات تحت `/api/v1`.
 
-### 3.1 المصادقة والحساب
+> ✅ = منفذ ومختبر في المرحلة 3 (الخادم الحقيقي). الباقي تصميم للمراحل اللاحقة.
+> المؤسسة النشطة تُحدد من المسار `/schools/:schoolId/...` أو من الترويسة `X-School-Id` للمسارات العامة مثل `/users`.
+> التوثيق التفاعلي (Swagger) متاح في التطوير على `/api/docs`.
+
+### 3.1 المصادقة والحساب ✅
 | الطريقة | المسار | الوصف |
 |---|---|---|
-| POST | `/auth/login` | `{username, password}` → `{accessToken, user, schools[]}` + cookie |
-| POST | `/auth/refresh` | تدوير refresh token |
+| GET | `/auth/setup-status` | `{needsSetup, setupTokenRequired}` |
+| POST | `/auth/setup` | الإعداد الأول: حساب مدير النظام مرة واحدة فقط (`setupToken` إن ضُبط `SETUP_TOKEN`) |
+| POST | `/auth/login` | `{username, password}` → `{accessToken, user}` + cookie `hat_refresh` (httpOnly) |
+| POST | `/auth/refresh` | تدوير رمز التجديد؛ إعادة استعمال رمز قديم تلغي كل جلسات المستخدم |
 | POST | `/auth/logout` | إلغاء الجلسة |
-| GET | `/auth/me` | المستخدم، أدواره وصلاحياته الفعلية لكل مؤسسة |
-| POST | `/auth/change-password` | |
-| GET/DELETE | `/auth/sessions[/:id]` | إدارة الجلسات النشطة |
+| GET | `/auth/me` | المستخدم، أدواره، `permissions` الفعلية لكل مؤسسة، `mustChangePassword` |
+| POST | `/auth/change-password` | `{currentPassword, newPassword}`؛ يلغي جلسات الأجهزة الأخرى |
+| GET/DELETE | `/auth/sessions[/:id]` | الجلسات النشطة |
 
-### 3.2 التسلسل الإداري والمؤسسات
+حساب بكلمة مرور مؤقتة لا يصل إلا إلى `me` و`change-password` و`logout` (غير ذلك: 403 `PASSWORD_CHANGE_REQUIRED`).
+
+### 3.2 التسلسل الإداري والمؤسسات ✅
 | الطريقة | المسار | الوصف |
 |---|---|---|
-| GET | `/academies` | قائمة الأكاديميات |
-| GET | `/academies/:id/directorates` | المديريات التابعة فقط |
-| GET | `/directorates/:id/schools?q=&code=` | المؤسسات التابعة، بحث بالاسم أو الرمز |
-| POST/PATCH | `/academies`, `/directorates`, `/schools[/:id]` | 🔒 `schools.create/update` |
-| GET/PATCH | `/schools/:id/settings` | إعدادات المؤسسة |
-| GET/POST | `/schools/:id/years` | السنوات الدراسية |
+| GET | `/academies` | قائمة الأكاديميات (لكل مستخدم مسجل) |
+| POST | `/academies` | 🔒 مدير النظام |
+| GET | `/directorates?academyId=` | المديريات التابعة فقط |
+| POST | `/directorates` | 🔒 مدير النظام |
+| GET | `/schools?directorateId=&q=` | المؤسسات **المرئية للمستخدم فقط**؛ بحث عربي يتجاهل التشكيل والهمزات |
+| POST | `/schools` | 🔒 مدير النظام (تُنشأ معها `school_settings`) |
+| GET | `/schools/:schoolId` | 🔒 `schools.view` |
+| PUT | `/schools/:schoolId` | 🔒 `schools.update`، مع `schoolYear` (سنة حالية واحدة لكل مؤسسة) |
 
-### 3.3 الهوية البصرية والترويسة
+### 3.3 الهوية البصرية والترويسة ✅
 | الطريقة | المسار | الوصف |
 |---|---|---|
-| GET/PATCH | `/branding` | إعدادات الهوية للمؤسسة النشطة |
-| POST | `/branding/logo` | multipart (PNG/JPG/WEBP ≤ 2MB) |
-| DELETE | `/branding/logo` | 🔒 بعد تأكيد |
-| GET/POST | `/letterheads` | قائمة/إنشاء (`mode: IMAGE|GENERATED`) |
-| PATCH | `/letterheads/:id` | يزيد `version` ويُسجَّل في التدقيق |
-| POST | `/letterheads/:id/image` | رفع صورة الترويسة |
-| POST | `/letterheads/:id/set-default` | |
-| POST | `/letterheads/:id/preview` | → PDF A4 لتقرير نموذجي |
-| POST | `/branding/reset` | استعادة الافتراضي |
+| GET | `/schools/:schoolId/branding` | الإعدادات + الترويسة الحالية (الافتراضية من التسلسل إن لم تُحفظ) |
+| PUT | `/schools/:schoolId/branding` | 🔒 `branding.update`؛ الصور data URL يُتحقق من نوعها الحقيقي وحجمها وتُخزن كملفات؛ كل حفظ = إصدار ترويسة جديد والقديم يُؤرشف |
+| POST | `/schools/:schoolId/branding/reset` | 🔒 `branding.update`؛ استعادة الافتراضي كإصدار جديد (الشعار لا يُمس) |
+| GET | `/schools/:schoolId/branding/history` | من سجل التدقيق |
 
-### 3.4 المستخدمون والصلاحيات
-`GET/POST /users`, `PATCH /users/:id`, `POST /users/:id/suspend`, `PUT /users/:id/roles` (قائمة `{roleId, schoolId}`), `PUT /users/:id/permission-overrides`, `GET /roles`, `GET /permissions`. كلها 🔒 `users.manage`.
+تعدد الترويسات واختيارها لكل تقرير (`reports.choose_letterhead`) وتوليد PDF على الخادم: المرحلة 7.
+
+### 3.4 المستخدمون والصلاحيات ✅
+كلها 🔒 `users.manage` داخل المؤسسة النشطة (`X-School-Id`):
+| الطريقة | المسار | الوصف |
+|---|---|---|
+| GET | `/roles`, `/permissions` | الأدوار بصلاحياتها الافتراضية، وقائمة الصلاحيات |
+| GET | `/users` | من لهم دور في المؤسسة (مدير النظام يرى أيضاً الحسابات بلا دور) |
+| POST | `/users` | ينشئ الحساب بكلمة مرور مؤقتة عشوائية تُعاد **مرة واحدة** |
+| PUT | `/users/:id` | البيانات والحالة (`ACTIVE`/`DISABLED`؛ التعطيل يلغي الجلسات؛ لا حذف) |
+| PUT | `/users/:id/roles` | أدوار المستخدم في هذه المؤسسة |
+| PUT | `/users/:id/overrides` | منح/سحب فردي `[{permission, granted}]` |
+| POST | `/users/:id/reset-password` | كلمة مرور مؤقتة جديدة + إلغاء الجلسات + فك القفل |
+
+قواعد منع التصعيد: دور `ADMIN` لا يمنحه أو يسحبه إلا مدير نظام؛ لا يُمنح فردياً ما لا يملكه المانح؛ غير مدير النظام لا يعدّل حساب مدير نظام؛ يبقى مدير نظام نشط واحد على الأقل (`LAST_ADMIN`).
 
 ### 3.5 القوائم القابلة للتعديل
-`GET /lookups/:listKey`، `POST /lookups/:listKey` 🔒 `lookups.manage`، `PATCH /lookups/:listKey/:id`. تُستعمل لكل Select في الواجهة مع بحث `?q=`.
+`GET /schools/:schoolId/lookups?listKey=` ✅ (🔒 `lookups.view`: القيم العامة + قيم المؤسسة). الإضافة والتعديل 🔒 `lookups.manage`: مع شاشات المرحلة 4.
+
+### 3.19-أ لوحة القيادة ✅
+`GET /schools/:schoolId/dashboard/{stats,alerts,activity}` 🔒 `dashboard.view` — أرقام محسوبة من القاعدة، وآخر العمليات من سجل التدقيق. `GET /notifications` إشعارات المستخدم. `GET /health` فحص الخادم والقاعدة.
 
 ### 3.6 الممتلكات
 | الطريقة | المسار | الوصف |

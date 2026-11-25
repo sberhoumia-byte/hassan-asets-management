@@ -120,3 +120,40 @@ export const logoSettingsSchema = z.object({
   logoAlign: alignment,
 });
 export type LogoSettingsInput = z.infer<typeof logoSettingsSchema>;
+
+export const changePasswordSchema = z.object({
+  currentPassword: req(z.string()),
+  newPassword: passwordSchema,
+});
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
+// ---------- المستخدمون والأدوار (المرحلة 3) ----------
+const username = req(z.string())
+  .min(3, "errors.usernameMin")
+  .max(40, "errors.tooLong")
+  .regex(/^[a-zA-Z0-9._-]+$/, "errors.usernameChars");
+
+export const userCreateSchema = z.object({
+  username,
+  fullNameAr: req(z.string()).max(120, "errors.tooLong"),
+  fullNameFr: optionalText,
+  email,
+  phone,
+  roles: z.array(z.string().min(1)).min(1, "errors.roleRequired"),
+});
+export type UserCreateInput = z.infer<typeof userCreateSchema>;
+
+export const userUpdateSchema = z.object({
+  fullNameAr: req(z.string()).max(120, "errors.tooLong"),
+  fullNameFr: optionalText,
+  email,
+  phone,
+  status: z.enum(["ACTIVE", "DISABLED"]),
+});
+export type UserUpdateInput = z.infer<typeof userUpdateSchema>;
+
+export const userRolesSchema = z.object({ roles: z.array(z.string().min(1)) });
+export const userOverridesSchema = z.object({
+  overrides: z.array(z.object({ permission: z.string().min(3), granted: z.boolean() })).max(300),
+});
+export type UserOverridesInput = z.infer<typeof userOverridesSchema>;

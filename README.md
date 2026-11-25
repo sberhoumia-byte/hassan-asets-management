@@ -5,8 +5,7 @@
 
 *التدبير المادي الذكي – من أجل مؤسسة منظمة وذات جودة للجميع.*
 
-> ⚠ **الحالة الحالية: المرحلة الثانية (الواجهات) منجزة في «وضع المراجعة».**
-> الواجهات تعمل فعلياً، لكن البيانات تُحفظ في المتصفح فقط إلى حين ربط الخادم وقاعدة البيانات في المرحلة 3.
+> **الحالة الحالية: المرحلة الثالثة منجزة** — خادم NestJS + PostgreSQL، المصادقة والجلسات، الأدوار والصلاحيات وعزل المؤسسات، التسلسل الإداري، الهوية البصرية، المستخدمون. الوحدات من 4 إلى 10 لم تُبنَ بعد وتظهر معطلة مع رقم مرحلتها.
 
 ## ما هو موجود الآن
 
@@ -26,35 +25,40 @@
 - Node.js 22 أو أحدث، npm 10
 - PostgreSQL 16 (أو Docker)
 
-## الأوامر المتاحة حالياً
+## التشغيل المحلي (تطوير)
 
-```bash
-npm install                 # تثبيت التبعيات (Prisma حالياً)
-npm run db:validate         # التحقق من مخطط Prisma
-
-# اختبار قيود قاعدة البيانات على قاعدة اختبار فارغة (ستُمسح محتوياتها)
-TEST_DATABASE_URL=postgresql://user@localhost:5432/hassan_test ./scripts/test-db-constraints.sh
-```
-
-قاعدة تطوير عبر Docker:
-```bash
-cp .env.example .env        # ثم عدّل القيم
-docker compose -f docker/docker-compose.dev.yml --env-file .env up -d
-```
-
-## تشغيل الواجهة (المرحلة 2)
 ```bash
 npm install
-npm run dev:web        # http://localhost:5173
-npm run build:web      # بناء الإنتاج في apps/web/dist
-npm run build:review   # ملف HTML واحد مستقل للمراجعة (apps/web/dist-review)
-npm test               # اختبارات الوحدة (Vitest)
-npm run test:e2e       # اختبارات Playwright (حاسوب + هاتف)
+cp .env.example .env          # املأ DATABASE_URL و TEST_DATABASE_URL والأسرار (32 حرفاً عشوائياً على الأقل)
+docker compose -f docker/docker-compose.dev.yml --env-file .env up -d   # أو PostgreSQL 16 مثبت محلياً
+npm run db:deploy             # تطبيق الهجرات
+npm run db:seed               # بيانات الأساس: الصلاحيات، الأدوار، القوائم، التسلسل الافتراضي (لا مستخدمين)
+npm run dev:api               # الخادم: http://localhost:3000/api/v1  (Swagger: /api/docs)
+npm run dev:web               # الواجهة: http://localhost:5173 (تمرر /api إلى 3000)
 ```
-عند أول تشغيل تظهر شاشة «الإعداد الأول» لإنشاء حساب المدير.
+عند أول فتح تظهر شاشة «الإعداد الأول» لإنشاء حساب مدير النظام. لا توجد أي كلمة مرور افتراضية.
+
+## التشغيل على خادم المؤسسة (Docker)
+```bash
+cp .env.example .env          # كلمات مرور وأسرار حقيقية هنا فقط، لا في المستودع
+docker compose -f docker/docker-compose.yml --env-file .env up -d --build
+# الواجهة: http://<عنوان-الخادم>:8080
+```
+⚠ ملفات Docker مكتوبة لكنها **لم تُجرَّب** في بيئة البناء الحالية (لا يتوفر فيها Docker).
+
+## الاختبارات
+```bash
+npm test                  # وحدة الواجهة + تكامل الخادم على PostgreSQL
+npm run test:e2e          # الشاشات (Playwright، حاسوب + هاتف) على نسخة المراجعة
+npm run test:e2e:server   # المسار الكامل على الخادم الحقيقي
+TEST_DATABASE_URL=... ./scripts/test-db-constraints.sh   # قيود القاعدة (SQL)
+```
+
+## نسخة المراجعة
+`npm run build:review` ينتج ملف HTML واحداً يعمل دون خادم (البيانات في المتصفح فقط) لعرض الواجهات.
 
 ## أوامر معرَّفة لكنها غير مربوطة بعد
-`dev:api` (المرحلة 3)، `build:android` و`build:windows` (المرحلة 10) — تطبع المرحلة وتخرج برمز خطأ.
+`build:android` و`build:windows` (المرحلة 10) — تطبع المرحلة وتخرج برمز خطأ.
 
 ## هيكل المستودع
 ```
@@ -68,5 +72,5 @@ scripts/  tests/  docker/  storage/
 ## قواعد العمل
 - لا أسرار ولا كلمات مرور حقيقية في المستودع.
 - لا أرقام أو بيانات واقعية مفترضة؛ كل البيانات تُدخل من المستخدم أو Excel.
-- البيانات التجريبية منفصلة (`database/seeds`، أمر `db:seed:test`).
+- بيانات الأساس (`db:seed`) لا تحتوي أي بيانات واقعية ولا مستخدمين؛ الاختبارات تعمل في مخططات معزولة تُحذف بعدها.
 - لا تُعلن أي وحدة مكتملة قبل اختبارها.

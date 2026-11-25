@@ -12,6 +12,9 @@ interface AuthCtx {
   activeSchool: School | null;
   setActiveSchoolId: (id: string) => void;
   roleLabel: string | null;
+  isSystemAdmin: boolean;
+  /** هل يملك المستخدم الصلاحية في المؤسسة النشطة؟ (الخادم يتحقق دائماً؛ هذا لإخفاء ما لا يحق له فقط) */
+  can: (permission: string) => boolean;
   refresh: () => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -64,8 +67,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const role = user && activeSchool
       ? (user.roles.find((r) => r.schoolId === activeSchool.id) ?? user.roles.find((r) => r.role === "ADMIN"))?.role ?? null
       : null;
+    const isSystemAdmin = !!user && (user.isSystemAdmin ?? user.roles.some((r) => r.role === "ADMIN"));
+    const perms = user?.permissions && activeSchool ? user.permissions[activeSchool.id] : undefined;
+    // وضع المراجعة لا يحمل صلاحيات تفصيلية (حساب المدير فقط)
+    const can = (p: string) => (!user ? false : !user.permissions ? isSystemAdmin : perms ? perms.includes(p) : isSystemAdmin);
     return {
       user,
+      isSystemAdmin,
+      can,
       loading: setupQ.isLoading || (setupQ.data === false && meQ.isLoading) || (!!user && schoolsQ.isLoading),
       needsSetup: setupQ.data === true,
       schools,

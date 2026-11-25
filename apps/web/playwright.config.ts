@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
+  // واجهات الشاشات على نسخة المراجعة (بيانات محلية لكل سياق متصفح). اختبارات الخادم الحقيقي: playwright.server.config.ts
   testDir: "./e2e",
   timeout: 30_000,
   fullyParallel: true,
@@ -16,9 +17,9 @@ export default defineConfig({
     { name: "mobile", use: { ...devices["Pixel 7"] }, testMatch: /responsive\.spec\.ts/ },
   ],
   webServer: {
-    command: "npm run build && npm run preview",
+    command: "npm run build:review && npx vite preview --mode review --port 4173",
     url: "http://localhost:4173",
-    reuseExistingServer: true,
+    reuseExistingServer: false,
     timeout: 120_000,
   },
 });

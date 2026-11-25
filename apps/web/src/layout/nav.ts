@@ -25,6 +25,8 @@ export interface NavItem {
   icon: Icon;
   to?: string; // مسار الشاشة إن كانت منجزة
   phase?: number; // المرحلة التي تُبنى فيها الوحدة إن لم تكن منجزة
+  perm?: string; // تُخفى إن لم يملك المستخدم هذه الصلاحية
+  serverOnly?: boolean; // تتطلب الخادم (غير متاحة في نسخة المراجعة المحلية)
 }
 
 /** ترتيب القائمة الرئيسية كما في المادة 5 من المواصفات. */
@@ -45,7 +47,7 @@ export const NAV: NavItem[] = [
   { key: "excel", icon: IconFileSpreadsheet, phase: 7 },
   { key: "documents", icon: IconArchive, phase: 7 },
   { key: "reports", icon: IconChartBar, phase: 7 },
-  { key: "users", icon: IconUsers, phase: 3 },
+  { key: "users", icon: IconUsers, to: "/users", perm: "users.manage", serverOnly: true },
   { key: "settings", icon: IconSettings, to: "/settings" },
 ];
 

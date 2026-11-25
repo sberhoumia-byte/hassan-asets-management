@@ -7,7 +7,9 @@ import { viteSingleFile } from "vite-plugin-singlefile";
 export default defineConfig(({ mode }) => ({
   base: "./",
   plugins: [react(), tailwindcss(), ...(mode === "review" ? [viteSingleFile()] : [])],
-  server: { port: 5173 },
+  // في التطوير: الواجهة على 5173 والخادم على 3000 (نفس الأصل عبر الوكيل ← كوكي SameSite=Strict يعمل)
+  server: { port: 5173, proxy: { "/api": { target: process.env.API_PROXY_TARGET ?? "http://localhost:3000", changeOrigin: false } } },
+  preview: { port: 4173, proxy: { "/api": { target: process.env.API_PROXY_TARGET ?? "http://localhost:3000", changeOrigin: false } } },
   build:
     mode === "review"
       ? { target: "es2022", outDir: "dist-review", assetsInlineLimit: 100_000_000 }

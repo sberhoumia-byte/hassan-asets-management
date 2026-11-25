@@ -3,10 +3,13 @@ import { Tooltip } from "@mantine/core";
 import { NAV } from "./nav";
 import { useI18n } from "../i18n";
 import { SchoolLogo } from "../components/SchoolLogo";
+import { useAuth } from "../auth/AuthProvider";
+import { api } from "../api";
 
 export function Sidebar() {
   const { t } = useI18n();
   const { pathname } = useLocation();
+  const { can } = useAuth();
 
   return (
     <nav className="sidebar no-print" aria-label={t("nav.aria")}>
@@ -17,8 +20,18 @@ export function Sidebar() {
           <div className="text-xs text-[#a9c1e0]">HASSAN IBN THABIT</div>
         </div>
       </div>
-      {NAV.map((item, i) => {
+      {NAV.filter((item) => !item.perm || api.mode === "review" || can(item.perm)).map((item, i) => {
         const Icon = item.icon;
+        if (item.serverOnly && api.mode === "review") {
+          return (
+            <Tooltip key={item.key} label={t("users.serverOnly")} position="left" withArrow>
+              <div className="side-link" aria-disabled="true" role="link" data-testid={`nav-${item.key}`}>
+                <Icon size={20} stroke={1.6} />
+                <span className="lbl">{t(`nav.${item.key}`)}</span>
+              </div>
+            </Tooltip>
+          );
+        }
         const label = `${i + 1}. ${t(`nav.${item.key}`)}`;
         if (!item.to) {
           return (

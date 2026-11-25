@@ -17,6 +17,8 @@ import { HierarchyPage } from "./pages/settings/HierarchyPage";
 import { BrandingPage } from "./pages/settings/BrandingPage";
 import { PrintPreviewPage } from "./pages/settings/PrintPreviewPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
+import { UsersPage } from "./pages/UsersPage";
+import { ForcePasswordPage } from "./pages/ForcePasswordPage";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
@@ -46,6 +48,7 @@ function Gate({ children, area }: { children: ReactNode; area: "setup" | "login"
   if (area === "setup") return <Navigate to={user ? "/" : "/login"} replace />;
   if (!user) return area === "login" ? <>{children}</> : <Navigate to="/login" replace state={{ from: loc.pathname }} />;
   if (area === "login") return <Navigate to="/" replace />;
+  if (user.mustChangePassword) return <ForcePasswordPage />;
   return <>{children}</>;
 }
 
@@ -65,6 +68,7 @@ export function App() {
                     <Route path="/login" element={<Gate area="login"><LoginPage /></Gate>} />
                     <Route element={<Gate area="app"><AppLayout /></Gate>}>
                       <Route index element={<DashboardPage />} />
+                      <Route path="users" element={<UsersPage />} />
                       <Route path="settings" element={<SettingsLayout />}>
                         <Route index element={<Navigate to="school" replace />} />
                         <Route path="school" element={<SchoolInfoPage />} />

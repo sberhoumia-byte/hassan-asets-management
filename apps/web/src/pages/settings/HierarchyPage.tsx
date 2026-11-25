@@ -12,12 +12,14 @@ import { api, ApiError, type School } from "../../api";
 import { useAuth } from "../../auth/AuthProvider";
 import { useI18n } from "../../i18n";
 import { SchoolFormFields, type SchoolFormValues } from "../../components/SchoolFormFields";
+import { errorKey } from "../../lib/errors";
 
 const schoolFormSchema = schoolSchema.extend({ academyId: z.string().min(1, "errors.required") });
 
 export function HierarchyPage() {
   const { t, pick } = useI18n();
-  const { activeSchool, setActiveSchoolId } = useAuth();
+  const { activeSchool, setActiveSchoolId, isSystemAdmin, can } = useAuth();
+  const canEdit = (id: string) => isSystemAdmin || (id === activeSchool?.id && can("schools.update"));
   const [academyId, setAcademyId] = useState<string | null>(null);
   const [directorateId, setDirectorateId] = useState<string | null>(null);
   const [q, setQ] = useState("");
@@ -63,9 +65,14 @@ export function HierarchyPage() {
                 </Button>
               </span>
             </Tooltip>
-            <Button variant="light" leftSection={<IconPlus size={16} />} onClick={() => setModal("academy")}>{t("hierarchy.addAcademy")}</Button>
-            <Button variant="light" leftSection={<IconPlus size={16} />} onClick={() => setModal("directorate")}>{t("hierarchy.addDirectorate")}</Button>
-            <Button leftSection={<IconPlus size={16} />} onClick={() => setModal({ school: null })} data-testid="add-school">{t("hierarchy.addSchool")}</Button>
+            {/* إنشاء الأكاديميات والمديريات والمؤسسات: مدير النظام فقط */}
+            {isSystemAdmin && (
+              <>
+                <Button variant="light" leftSection={<IconPlus size={16} />} onClick={() => setModal("academy")}>{t("hierarchy.addAcademy")}</Button>
+                <Button variant="light" leftSection={<IconPlus size={16} />} onClick={() => setModal("directorate")}>{t("hierarchy.addDirectorate")}</Button>
+                <Button leftSection={<IconPlus size={16} />} onClick={() => setModal({ school: null })} data-testid="add-school">{t("hierarchy.addSchool")}</Button>
+              </>
+            )}
           </Group>
         </Group>
         <SimpleGrid cols={{ base: 1, md: 3 }}>
@@ -131,9 +138,11 @@ export function HierarchyPage() {
                         {s.id !== activeSchool?.id && (
                           <Button size="compact-xs" variant="subtle" onClick={() => setActiveSchoolId(s.id)}>{t("hierarchy.makeActive")}</Button>
                         )}
-                        <ActionIcon variant="subtle" aria-label={t("common.edit")} onClick={() => setModal({ school: s })}>
-                          <IconEdit size={16} />
-                        </ActionIcon>
+                        {canEdit(s.id) && (
+                          <ActionIcon variant="subtle" aria-label={t("common.edit")} onClick={() => setModal({ school: s })}>
+                            <IconEdit size={16} />
+                          </ActionIcon>
+                        )}
                       </Group>
                     </Table.Td>
                   </Table.Tr>
@@ -168,6 +177,7 @@ function AcademyModal({ opened, onClose, onCreated }: { opened: boolean; onClose
       onClose();
     } catch (e) {
       if (e instanceof ApiError && e.code === "DUPLICATE_NAME") f.setError("nameAr", { message: "errors.duplicateName" });
+      else notifications.show({ color: "red", message: t(errorKey(e)) });
     }
   });
   return (
@@ -212,6 +222,7 @@ function DirectorateModal({
       onClose();
     } catch (e) {
       if (e instanceof ApiError && e.code === "DUPLICATE_NAME") f.setError("nameAr", { message: "errors.duplicateName" });
+      else notifications.show({ color: "red", message: t(errorKey(e)) });
     }
   });
   return (
@@ -276,7 +287,7 @@ function SchoolModal({
       onClose();
     } catch (e) {
       if (e instanceof ApiError && e.code === "DUPLICATE_ADMIN_CODE") f.setError("adminCode", { message: "errors.duplicateCode" });
-      else notifications.show({ color: "red", message: t("errors.unexpected") });
+      else notifications.show({ color: "red", message: t(errorKey(e)) });
     }
   });
 

@@ -1,0 +1,48 @@
+# التشغيل الكامل على خادم المؤسسة: PostgreSQL + API + الواجهة (nginx).
+#   cp .env.example .env   ← ثم املأ كلمات المرور والأسرار (لا قيم حقيقية في المستودع)
+#   docker compose -f docker/docker-compose.yml --env-file .env up -d --build
+# الواجهة: http://<عنوان-الخادم>:8080  — عند أول فتح تظهر شاشة إنشاء حساب مدير النظام.
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-hassan}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-hassan_assets}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hassan}"]
+      interval: 5s
+      retries: 20
+
+  api:
+    build: { context: .., dockerfile: docker/Dockerfile.api }
+    restart: unless-stopped
+    depends_on: { postgres: { condition: service_healthy } }
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hassan}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-hassan_assets}?schema=public
+      API_PORT: "3000"
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:8080}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set JWT_ACCESS_SECRET in .env}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?set JWT_REFRESH_SECRET in .env}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+      JWT_REFRESH_TTL_DAYS: ${JWT_REFRESH_TTL_DAYS:-7}
+      STORAGE_PATH: /data/storage
+      SETUP_TOKEN: ${SETUP_TOKEN:-}
+      # على شبكة محلية بلا HTTPS يجب false وإلا لن يحفظ المتصفح كوكي الجلسة. مع HTTPS: true
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    volumes:
+      - storage:/data/storage
+
+  web:
+    build: { context: .., dockerfile: docker/Dockerfile.web }
+    restart: unless-stopped
+    depends_on: [api]
+    ports:
+      - "${WEB_PORT:-8080}:80"
+
+volumes:
+  pgdata:
+  storage:

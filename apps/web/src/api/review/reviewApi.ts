@@ -49,7 +49,7 @@ interface DB {
 
 const SESSION_KEY = "hassan.session";
 const MAX_FAILED = 5;
-const LOCK_MS = 5 * 60 * 1000;
+const LOCK_MS = 15 * 60 * 1000; // مطابق للخادم
 const uid = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
 const clean = <T extends object>(o: T): T =>

@@ -49,12 +49,21 @@
 ## 4. التشغيل
 
 ```bash
-# متوفر الآن
+# قيود قاعدة البيانات (SQL)
 TEST_DATABASE_URL=postgresql://user@localhost:5432/hassan_test ./scripts/test-db-constraints.sh
 
-# لاحقاً (من المرحلة 3)
-npm test
-npm run test:e2e
+# الوحدة (الواجهة) + تكامل الخادم على PostgreSQL حقيقي
+npm test                  # web: Vitest — api: Vitest + supertest
+npm run test:api          # الخادم وحده (31 اختباراً)
+
+# الواجهة (Playwright)
+npm run test:e2e          # الشاشات على نسخة المراجعة (حاسوب + هاتف)
+npm run test:e2e:server   # المسار الكامل على الخادم الحقيقي وقاعدة البيانات
+```
+
+اختبارات الخادم والـE2E الحقيقي تنشئ **مخططاً جديداً معزولاً** (`test_<زمن>` أو `e2e_<زمن>`) داخل `TEST_DATABASE_URL`، تطبق عليه الهجرات وبيانات الأساس، ثم تحذف ذلك المخطط وحده في النهاية. لا تلمس قاعدة التطوير أبداً، ولا تستعمل `migrate reset`.
+
+```
 ```
 
 ## 5. معيار إنهاء كل مرحلة

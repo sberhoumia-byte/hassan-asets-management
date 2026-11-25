@@ -9,6 +9,8 @@ import type {
   LogoSettingsInput,
   SchoolInput,
   SetupAdminInput,
+  UserCreateInput,
+  UserUpdateInput,
 } from "@hassan/validation";
 
 export type RoleCode =
@@ -42,6 +44,42 @@ export interface SessionUser {
   username: string;
   fullNameAr: string;
   roles: { role: RoleCode; schoolId: string }[];
+  /** الخادم فقط: الصلاحيات الفعلية لكل مؤسسة (أدوار + منح − سحب). */
+  permissions?: Record<string, string[]>;
+  isSystemAdmin?: boolean;
+  /** كلمة مرور مؤقتة: يجب تغييرها قبل أي عمل. */
+  mustChangePassword?: boolean;
+}
+
+// ---------- إدارة المستخدمين (الخادم فقط — المرحلة 3) ----------
+export interface RoleInfo { code: RoleCode; nameAr: string; nameFr?: string; permissions: string[] }
+export interface PermissionInfo { code: string; module: string; action: string }
+export interface PermissionOverride { permission: string; granted: boolean }
+export interface ManagedUser {
+  id: string;
+  username: string;
+  fullNameAr: string;
+  fullNameFr?: string;
+  email?: string;
+  phone?: string;
+  status: "ACTIVE" | "SUSPENDED" | "DISABLED";
+  mustChangePassword: boolean;
+  lastLoginAt?: string;
+  locked: boolean;
+  roles: RoleCode[];
+  overrides: PermissionOverride[];
+}
+
+/** كل العمليات داخل المؤسسة النشطة schoolId. */
+export interface UsersApi {
+  listRoles(): Promise<RoleInfo[]>;
+  listPermissions(): Promise<PermissionInfo[]>;
+  list(schoolId: string): Promise<ManagedUser[]>;
+  create(schoolId: string, input: UserCreateInput): Promise<{ user: ManagedUser; temporaryPassword: string }>;
+  update(schoolId: string, id: string, input: UserUpdateInput): Promise<ManagedUser>;
+  setRoles(schoolId: string, id: string, roles: RoleCode[]): Promise<ManagedUser>;
+  setOverrides(schoolId: string, id: string, overrides: PermissionOverride[]): Promise<ManagedUser>;
+  resetPassword(schoolId: string, id: string): Promise<{ temporaryPassword: string }>;
 }
 
 export interface Letterhead extends LetterheadInput {
@@ -98,7 +136,9 @@ export interface Api {
   readonly mode: "review" | "server";
   // الإعداد الأول والمصادقة
   needsSetup(): Promise<boolean>;
-  setup(input: SetupAdminInput): Promise<void>;
+  setup(input: SetupAdminInput & { setupToken?: string }): Promise<void>;
+  /** الخادم فقط: هل يطلب الإعداد الأول رمز SETUP_TOKEN؟ */
+  setupTokenRequired?(): Promise<boolean>;
   login(username: string, password: string): Promise<SessionUser>;
   logout(): Promise<void>;
   me(): Promise<SessionUser | null>;
@@ -122,4 +162,6 @@ export interface Api {
   dashboardAlerts(schoolId: string): Promise<DashboardAlert[]>;
   recentActivity(schoolId: string, limit?: number): Promise<ActivityEntry[]>;
   notifications(): Promise<NotificationItem[]>;
+  /** متاحة مع الخادم فقط؛ وضع المراجعة لا يدير مستخدمين. */
+  readonly users?: UsersApi;
 }

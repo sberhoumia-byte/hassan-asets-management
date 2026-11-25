@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ES2022",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "strictPropertyInitialization": false,
+    "noEmit": true,
+    "declaration": false,
+    "types": ["node"],
+    "lib": ["ES2022"]
+  },
+  "include": ["src", "test", "../../packages/validation/src", "../../packages/shared/src"]
+}

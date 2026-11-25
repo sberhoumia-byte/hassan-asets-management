@@ -11,6 +11,7 @@ import { useAuth } from "../../auth/AuthProvider";
 import { useI18n } from "../../i18n";
 import { SchoolFormFields, type SchoolFormValues } from "../../components/SchoolFormFields";
 import { currentSchoolYear, schoolYearOptions } from "../../lib/schoolYear";
+import { errorKey } from "../../lib/errors";
 
 const formSchema = schoolSchema.extend({
   academyId: z.string().min(1, "errors.required"),
@@ -19,7 +20,7 @@ const formSchema = schoolSchema.extend({
 
 export function SchoolInfoPage() {
   const { t } = useI18n();
-  const { activeSchool } = useAuth();
+  const { activeSchool, can } = useAuth();
   const qc = useQueryClient();
   const sid = activeSchool?.id;
   const school = useQuery({ queryKey: ["school", sid], queryFn: () => api.getSchool(sid!), enabled: !!sid });
@@ -52,7 +53,7 @@ export function SchoolInfoPage() {
       notifications.show({ color: "green", message: t("school.saved") });
     } catch (e) {
       if (e instanceof ApiError && e.code === "DUPLICATE_ADMIN_CODE") form.setError("adminCode", { message: "errors.duplicateCode" });
-      else notifications.show({ color: "red", message: t("errors.unexpected") });
+      else notifications.show({ color: "red", message: t(errorKey(e)) });
     }
   });
 
@@ -71,7 +72,11 @@ export function SchoolInfoPage() {
           yearOptions={schoolYearOptions()}
         />
         <Group mt="lg">
-          <Button type="submit" loading={form.formState.isSubmitting} data-testid="school-save">{t("common.save")}</Button>
+          {can("schools.update") ? (
+            <Button type="submit" loading={form.formState.isSubmitting} data-testid="school-save">{t("common.save")}</Button>
+          ) : (
+            <Text size="sm" c="dimmed">{t("common.readOnly")}</Text>
+          )}
           <Button variant="default" onClick={() => form.reset()} disabled={!form.formState.isDirty}>{t("common.cancel")}</Button>
         </Group>
       </form>

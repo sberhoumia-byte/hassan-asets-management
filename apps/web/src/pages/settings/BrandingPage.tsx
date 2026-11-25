@@ -40,12 +40,14 @@ import { defaultLetterhead } from "../../lib/defaults";
 import { ReportDocument } from "../../print/ReportDocument";
 import { ScaledPreview } from "../../print/ScaledPreview";
 import { sampleRows } from "../../print/sampleReport";
+import { errorKey } from "../../lib/errors";
 
 type Draft = Omit<Branding, "schoolId" | "updatedAt" | "updatedBy">;
 
 export function BrandingPage() {
   const { t, fmtDateTime } = useI18n();
-  const { activeSchool } = useAuth();
+  const { activeSchool, can } = useAuth();
+  const canEdit = can("branding.update");
   const sid = activeSchool?.id;
   const qc = useQueryClient();
   const nav = useNavigate();
@@ -115,6 +117,8 @@ export function BrandingPage() {
       await qc.invalidateQueries({ queryKey: ["brandingHistory", sid] });
       await qc.invalidateQueries({ queryKey: ["dash"] });
       notifications.show({ color: "green", message: t("branding.saved") });
+    } catch (e) {
+      notifications.show({ color: "red", message: t(errorKey(e)) });
     } finally {
       setSaving(false);
     }
@@ -122,7 +126,12 @@ export function BrandingPage() {
 
   const reset = () =>
     confirm(t("branding.resetTitle"), t("branding.resetBody"), async () => {
-      await api.resetBranding(sid!);
+      try {
+        await api.resetBranding(sid!);
+      } catch (e) {
+        notifications.show({ color: "red", message: t(errorKey(e)) });
+        return;
+      }
       await qc.invalidateQueries({ queryKey: ["branding", sid] });
       await qc.invalidateQueries({ queryKey: ["brandingHistory", sid] });
       await qc.invalidateQueries({ queryKey: ["dash"] });
@@ -356,12 +365,16 @@ export function BrandingPage() {
         </Tabs>
 
         <Group mt="xl" gap="xs">
-          <Button onClick={save} loading={saving} disabled={!dirty} data-testid="branding-save">{t("common.save")}</Button>
-          <Button variant="default" onClick={() => q.data && setDraft(fromServer(q.data))} disabled={!dirty} data-testid="branding-discard">{t("branding.discard")}</Button>
+          {canEdit && (
+            <>
+              <Button onClick={save} loading={saving} disabled={!dirty} data-testid="branding-save">{t("common.save")}</Button>
+              <Button variant="default" onClick={() => q.data && setDraft(fromServer(q.data))} disabled={!dirty} data-testid="branding-discard">{t("branding.discard")}</Button>
+            </>
+          )}
           <Button variant="light" leftSection={<IconPrinter size={16} />} onClick={() => nav("/settings/print-preview")} data-testid="go-print-preview">
             {t("branding.testOnReport")}
           </Button>
-          <Button variant="subtle" color="red" onClick={reset} data-testid="branding-reset">{t("branding.reset")}</Button>
+          {canEdit && <Button variant="subtle" color="red" onClick={reset} data-testid="branding-reset">{t("branding.reset")}</Button>}
         </Group>
         {dirty && <Text size="xs" c="orange" mt="xs">{t("branding.unsaved")}</Text>}
         {q.data?.updatedAt && (
