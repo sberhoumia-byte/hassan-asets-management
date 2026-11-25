@@ -28,6 +28,7 @@ import { IconCopy, IconEdit, IconKey, IconPlus, IconShieldLock } from "@tabler/i
 import { userCreateSchema, userUpdateSchema, type UserCreateInput, type UserUpdateInput } from "@hassan/validation";
 import { api, ApiError, type ManagedUser, type PermissionOverride, type RoleCode, type UsersApi } from "../api";
 import { useAuth } from "../auth/AuthProvider";
+import { MODULES } from "@hassan/shared";
 import { useI18n } from "../i18n";
 
 /** شاشة المستخدمين والصلاحيات (المادة 30): داخل المؤسسة النشطة فقط. */
@@ -315,7 +316,9 @@ function AccessModal({ u, schoolId, user, onClose, onSaved }: { u: UsersApi; sch
   const byModule = useMemo(() => {
     const m = new Map<string, string[]>();
     for (const p of perms.data ?? []) m.set(p.module, [...(m.get(p.module) ?? []), p.code]);
-    return [...m];
+    // ترتيب الوحدات كما في القائمة الرئيسية (المادة 5)
+    const order = (x: string) => (MODULES as readonly string[]).indexOf(x);
+    return [...m].sort((a, b) => order(a[0]) - order(b[0]));
   }, [perms.data]);
 
   const effective = (code: string) => (ov[code] === "grant" ? true : ov[code] === "revoke" ? false : fromRoles.has(code));
@@ -366,7 +369,7 @@ function AccessModal({ u, schoolId, user, onClose, onSaved }: { u: UsersApi; sch
                             <Text size="sm">{t(`perm.action.${code.split(".")[1]}`)}</Text>
                             <Text size="xs" c="dimmed" dir="ltr" style={{ textAlign: "start" }}>{code}</Text>
                           </Table.Td>
-                          <Table.Td w={70}>
+                          <Table.Td w={96}>
                             <Badge size="sm" color={effective(code) ? "green" : "gray"} variant={effective(code) ? "filled" : "light"}>
                               {effective(code) ? t("users.allowed") : t("users.denied")}
                             </Badge>
