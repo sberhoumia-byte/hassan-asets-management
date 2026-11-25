@@ -62,3 +62,8 @@ ALTER TABLE assets ADD CONSTRAINT asset_qty_positive CHECK (quantity >= 1);
 
 -- (هجرة 20261125195004_stock_direction) اتجاه الحركة: +1 يزيد الرصيد، -1 ينقصه
 ALTER TABLE stock_movements ADD CONSTRAINT stock_movement_direction CHECK (direction IN (-1, 1));
+
+-- 10) أرشيف التقارير والمحاضر المولدة: إلحاق فقط (المرحلة 7).
+CREATE TRIGGER generated_reports_append_only
+  BEFORE UPDATE OR DELETE ON generated_reports
+  FOR EACH ROW EXECUTE FUNCTION forbid_mutation();

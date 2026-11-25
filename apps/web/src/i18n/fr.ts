@@ -1,6 +1,7 @@
 import { frPhase4 } from "./phase4.fr";
 import { frPhase5 } from "./phase5.fr";
 import { frPhase6 } from "./phase6.fr";
+import { frPhase7 } from "./phase7.fr";
 
 export const fr: Record<string, string> = {
   "app.shortName": "Gestion matérielle",
@@ -371,4 +372,5 @@ export const fr: Record<string, string> = {
   ...frPhase4,
   ...frPhase5,
   ...frPhase6,
+  ...frPhase7,
 };

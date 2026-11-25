@@ -31,7 +31,9 @@ export function decodeDataUrl(dataUrl: string, allowed: readonly string[], maxBy
   return { buf, mime };
 }
 
-const EXT: Record<string, string> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "application/pdf": "pdf" };
+const EXT: Record<string, string> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "application/pdf": "pdf",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+};
 
 /** تخزين الملفات على القرص (STORAGE_PATH) مع سجل StoredFile. المسار الداخلي لا يُكشف للعميل. */
 @Injectable()

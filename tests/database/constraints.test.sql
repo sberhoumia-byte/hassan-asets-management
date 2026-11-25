@@ -14,6 +14,8 @@ INSERT INTO educational_resources (id,"schoolId",code,name,"trackingMode","updat
 INSERT INTO educational_resource_units (id,"resourceId","inventoryNumber","updatedAt") VALUES ('00000000-0000-0000-0000-00000000000a','00000000-0000-0000-0000-000000000009','U1',now());
 INSERT INTO resource_loans (id,"schoolId",number,"resourceId","unitId","borrowerStaffId","dueAt","handedOverById","updatedAt") VALUES ('00000000-0000-0000-0000-00000000000b','00000000-0000-0000-0000-000000000003','L1','00000000-0000-0000-0000-000000000009','00000000-0000-0000-0000-00000000000a','00000000-0000-0000-0000-000000000008',now()+interval '7 day','00000000-0000-0000-0000-0000000000aa',now());
 INSERT INTO audit_logs ("schoolId",action,"entityType") VALUES ('00000000-0000-0000-0000-000000000003','CREATE','TEST');
+INSERT INTO stored_files (id,"schoolId","storageKey","originalName","mimeType","sizeBytes",sha256) VALUES ('00000000-0000-0000-0000-00000000000c','00000000-0000-0000-0000-000000000003','k/r.pdf','r.pdf','application/pdf',10,'x');
+INSERT INTO generated_reports (id,"schoolId",number,"reportKey",title,lang,format,"rowCount","fileId","createdById") VALUES (gen_random_uuid(),'00000000-0000-0000-0000-000000000003','RPT-1','ASSETS','t','ar','PDF',1,'00000000-0000-0000-0000-00000000000c','00000000-0000-0000-0000-0000000000aa');
 
 CREATE FUNCTION expect_fail(sql text, label text) RETURNS void AS $$
 BEGIN
@@ -27,6 +29,9 @@ SELECT expect_fail($$DELETE FROM stock_movements$$, 'حذف حركة مخزون 
 SELECT expect_fail($$INSERT INTO stock_movements (id,"schoolId",number,type,"itemId","warehouseId",quantity,direction,"createdById") VALUES (gen_random_uuid(),'00000000-0000-0000-0000-000000000003','M2','IN','00000000-0000-0000-0000-000000000006','00000000-0000-0000-0000-000000000005',1,0,'00000000-0000-0000-0000-0000000000aa')$$, 'اتجاه حركة غير +1/-1 مرفوض');
 SELECT expect_fail($$DELETE FROM audit_logs$$, 'حذف سجل التدقيق ممنوع');
 SELECT expect_fail($$UPDATE audit_logs SET action='X'$$, 'تعديل سجل التدقيق ممنوع');
+SELECT expect_fail($$UPDATE generated_reports SET title='X'$$, 'تعديل أرشيف التقارير ممنوع');
+SELECT expect_fail($$DELETE FROM generated_reports$$, 'حذف أرشيف التقارير ممنوع');
+SELECT expect_fail($$DELETE FROM stored_files WHERE id='00000000-0000-0000-0000-00000000000c'$$, 'حذف ملف تقرير مؤرشف ممنوع (FK)');
 SELECT expect_fail($$INSERT INTO resource_loans (id,"schoolId",number,"resourceId","unitId","borrowerStaffId","dueAt","handedOverById","updatedAt") VALUES (gen_random_uuid(),'00000000-0000-0000-0000-000000000003','L2','00000000-0000-0000-0000-000000000009','00000000-0000-0000-0000-00000000000a','00000000-0000-0000-0000-000000000008',now()+interval '1 day','00000000-0000-0000-0000-0000000000aa',now())$$, 'إعارة وحدة معارة ممنوعة');
 SELECT expect_fail($$INSERT INTO educational_resource_units (id,"resourceId","inventoryNumber","updatedAt") VALUES (gen_random_uuid(),'00000000-0000-0000-0000-000000000009','U1',now())$$, 'تكرار رقم الجرد ممنوع');
 SELECT expect_fail($$INSERT INTO assets (id,"schoolId","inventoryNumber",name,"categoryId","updatedAt") VALUES (gen_random_uuid(),'00000000-0000-0000-0000-000000000003','A1','x',gen_random_uuid(),now())$$, 'ممتلك بتصنيف غير موجود ممنوع (FK)');

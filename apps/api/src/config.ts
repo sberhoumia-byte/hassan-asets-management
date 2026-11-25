@@ -15,6 +15,15 @@ const schema = z.object({
   SETUP_TOKEN: z.string().optional(),
   /** حد محاولات الدخول لكل عنوان IP في الدقيقة (حماية من التخمين، إضافة إلى قفل الحساب). */
   LOGIN_RATE_LIMIT: z.coerce.number().int().positive().default(10),
+  /** مسار Chromium لتوليد PDF (إن لم يُحدد يُستعمل متصفح Playwright المثبت). */
+  CHROMIUM_PATH: z.string().optional(),
+  /** تعطيل عزل Chromium (مطلوب أحياناً داخل الحاويات). */
+  PDF_NO_SANDBOX: z
+    .string()
+    .optional()
+    .transform((v) => v === "true"),
+  /** مجلد خطوط @fontsource إن لم يكن في node_modules. */
+  FONTS_PATH: z.string().optional(),
   COOKIE_SECURE: z
     .string()
     .optional()

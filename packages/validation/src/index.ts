@@ -579,3 +579,60 @@ export const invoiceSchema = z.object({
   amount: z.number({ error: "errors.number" }).min(0, "errors.nonNegative").max(1_000_000_000, "errors.tooLarge"),
 });
 export type InvoiceInput = z.infer<typeof invoiceSchema>;
+
+// =====================================================================
+// المرحلة 7: التقارير (المفاتيح، المرشحات، اللغة)
+// =====================================================================
+export const REPORT_KEYS = [
+  "ASSETS",
+  "STOCK",
+  "STOCK_MOVEMENTS",
+  "STOCK_LOW",
+  "SPACES",
+  "FACILITIES",
+  "RESOURCES",
+  "LOANS",
+  "LOANS_OVERDUE",
+  "RETURNS",
+  "MAINTENANCE",
+  "PURCHASING",
+  "SUPPLIERS",
+  "CUSTODY",
+  "INVENTORY",
+  "DISCREPANCIES",
+  "ANNUAL",
+] as const;
+export type ReportKey = (typeof REPORT_KEYS)[number];
+
+export const REPORT_FILTERS = ["q", "from", "to", "status", "categoryId", "roomId", "warehouseId", "supplierId", "sessionId", "year", "includeArchived"] as const;
+export type ReportFilterKey = (typeof REPORT_FILTERS)[number];
+
+const optUuid = z.string().uuid("errors.required").optional().or(z.literal("").transform(() => undefined));
+const optDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "errors.date")
+  .optional()
+  .or(z.literal("").transform(() => undefined));
+
+export const reportFiltersSchema = z
+  .object({
+    q: z.string().trim().max(100, "errors.tooLong").optional(),
+    from: optDate,
+    to: optDate,
+    status: z.string().max(40).regex(/^[A-Z_]*$/, "errors.invalid").optional(),
+    categoryId: optUuid,
+    roomId: optUuid,
+    warehouseId: optUuid,
+    supplierId: optUuid,
+    sessionId: optUuid,
+    year: z.number({ error: "errors.number" }).int().min(2000, "errors.invalid").max(2100, "errors.invalid").optional(),
+    includeArchived: z.boolean().optional(),
+  })
+  .refine((f) => !f.from || !f.to || f.from <= f.to, { path: ["to"], message: "errors.endBeforeStart" });
+export type ReportFilters = z.infer<typeof reportFiltersSchema>;
+
+export const reportRequestSchema = z.object({
+  lang: z.enum(["ar", "fr"]).default("ar"),
+  filters: reportFiltersSchema.default({}),
+});
+export type ReportRequest = z.infer<typeof reportRequestSchema>;

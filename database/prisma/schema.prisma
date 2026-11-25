@@ -313,6 +313,7 @@ model School {
   backups              BackupRecord[]
   importJobs           ImportJob[]
   reportTemplates      ReportTemplate[]
+  generatedReports     GeneratedReport[]
   floorPlans           FloorPlan[]
   sequences            NumberSequence[]
 
@@ -577,6 +578,7 @@ model StoredFile {
   maintenancePhotos MaintenanceRequest[]  @relation("MaintenancePhoto")
   floorPlans        FloorPlan[]           @relation("FloorPlanBackground")
   importJobs        ImportJob[]           @relation("ImportSource")
+  generatedReports  GeneratedReport[]
 
   @@index([schoolId])
   @@map("stored_files")
@@ -1558,6 +1560,37 @@ model ReportTemplate {
   letterhead   Letterhead? @relation(fields: [letterheadId], references: [id], onDelete: SetNull)
 
   @@map("report_templates")
+}
+
+enum ReportFormat {
+  PDF
+  XLSX
+}
+
+// أرشيف التقارير والمحاضر المولدة: إلحاق فقط (trigger في constraints.sql)، الملف يبقى كما صدر مع بصمته.
+model GeneratedReport {
+  id                String       @id @default(uuid()) @db.Uuid
+  schoolId          String       @db.Uuid
+  number            String // RPT-{YEAR}-{SEQ:5}
+  reportKey         String // ASSETS ... أو DOC_LOAN_RECEIPT | DOC_INVENTORY | DOC_CUSTODY
+  title             String
+  lang              Locale
+  format            ReportFormat
+  filters           Json?
+  subjectId         String?      @db.Uuid // معرف الوثيقة المصدر (الإعارة، دورة الجرد، العهدة)
+  rowCount          Int
+  pageCount         Int?
+  fileId            String       @db.Uuid
+  letterheadVersion Int?
+  createdById       String       @db.Uuid
+  createdAt         DateTime     @default(now())
+  school            School       @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  file              StoredFile   @relation(fields: [fileId], references: [id], onDelete: Restrict)
+
+  @@unique([schoolId, number])
+  @@index([schoolId, createdAt])
+  @@index([schoolId, reportKey])
+  @@map("generated_reports")
 }
 
 model FloorPlan {

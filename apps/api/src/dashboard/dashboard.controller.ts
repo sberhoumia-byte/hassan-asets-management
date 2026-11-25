@@ -15,6 +15,12 @@ export class DashboardController {
   }
 
   @Perm("dashboard.view")
+  @Get("schools/:schoolId/dashboard/charts")
+  charts(@Param("schoolId", ParseUUIDPipe) schoolId: string) {
+    return this.d.charts(schoolId);
+  }
+
+  @Perm("dashboard.view")
   @Get("schools/:schoolId/dashboard/alerts")
   alerts(@Param("schoolId", ParseUUIDPipe) schoolId: string) {
     return this.d.alerts(schoolId);

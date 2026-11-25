@@ -36,6 +36,9 @@ import { CustodyService } from "./custody/custody.service";
 import { InventoryService } from "./inventory/inventory.service";
 import { PurchasingService } from "./purchasing/purchasing.service";
 import { CustodyController, InventoryController, MaintenanceController, PurchasingController } from "./phase6.controllers";
+import { PdfService } from "./reports/pdf.service";
+import { ReportsService } from "./reports/reports.service";
+import { ReportsController } from "./reports/reports.controller";
 
 @Module({
   imports: [
@@ -44,7 +47,7 @@ import { CustodyController, InventoryController, MaintenanceController, Purchasi
     // حد عام سخي لكل عنوان؛ مسارات الدخول لها حد أضيق (@Throttle)
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 600 }]),
   ],
-  controllers: [AuthController, HierarchyController, BrandingController, DashboardController, UsersController, HealthController, CatalogController, AssetsController, StockController, SuppliersController, SpacesController, StaffController, ResourcesController, LoansController, MaintenanceController, CustodyController, InventoryController, PurchasingController],
+  controllers: [AuthController, HierarchyController, BrandingController, DashboardController, UsersController, HealthController, CatalogController, AssetsController, StockController, SuppliersController, SpacesController, StaffController, ResourcesController, LoansController, MaintenanceController, CustodyController, InventoryController, PurchasingController, ReportsController],
   providers: [
     AuditService,
     AccessService,
@@ -66,6 +69,8 @@ import { CustodyController, InventoryController, MaintenanceController, Purchasi
     CustodyService,
     InventoryService,
     PurchasingService,
+    PdfService,
+    ReportsService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AppGuard },
   ],

@@ -23,7 +23,11 @@ export async function createApp(opts: { logger?: boolean } = {}) {
   app.use(cookieParser());
   // الصور (الشعار والترويسة) تُرسل كـ data URL داخل JSON: حتى 5MB للترويسة ≈ 7MB base64
   app.use(json({ limit: "12mb" }));
-  app.enableCors({ origin: c.WEB_ORIGIN.split(",").map((s) => s.trim()), credentials: true });
+  app.enableCors({
+    origin: c.WEB_ORIGIN.split(",").map((s) => s.trim()),
+    credentials: true,
+    exposedHeaders: ["Content-Disposition", "X-Report-Id", "X-Report-Number", "X-Report-Pages"],
+  });
   app.setGlobalPrefix("api/v1");
   app.useGlobalFilters(new ErrorFilter());
 
