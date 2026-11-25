@@ -38,6 +38,7 @@ interface MovementSpec {
   reason?: string | null;
   occurredAt?: Date | null;
   clientOpId?: string | null;
+  deliveryItemId?: string | null;
 }
 
 /**
@@ -184,6 +185,7 @@ export class StockService {
         reason: m.reason || null,
         occurredAt: m.occurredAt ?? new Date(),
         clientOpId: m.clientOpId ?? null,
+        deliveryItemId: m.deliveryItemId ?? null,
         createdById: user.id,
       },
     });
@@ -234,6 +236,18 @@ export class StockService {
       }
       throw e;
     }
+  }
+
+  /** إدخال إلى المخزون من تسلم طلبية، داخل معاملة الاقتناء نفسها (حركة IN عادية مرتبطة بسطر التسلم). */
+  async inFromDelivery(tx: Tx, schoolId: string, user: AuthUser, p: { itemId: string; warehouseId: string; quantity: number; unitCost?: number | null; supplierId?: string | null; reason: string; deliveryItemId: string }) {
+    await this.assertItem(schoolId, p.itemId);
+    await this.assertWarehouse(schoolId, p.warehouseId);
+    const bal = await this.lockBalances(tx, p.itemId, [p.warehouseId]);
+    const { mv } = await this.write(tx, schoolId, user, {
+      type: "IN", direction: 1, itemId: p.itemId, warehouseId: p.warehouseId, quantity: D(p.quantity),
+      unitCost: p.unitCost ?? null, supplierId: p.supplierId ?? null, reason: p.reason, deliveryItemId: p.deliveryItemId,
+    }, bal.get(p.warehouseId)!);
+    return mv;
   }
 
   async stockIn(schoolId: string, input: StockInInput, user: AuthUser, req: AppRequest) {

@@ -31,6 +31,11 @@ import { StaffService } from "./staff/staff.service";
 import { ResourcesService } from "./resources/resources.service";
 import { LoansService } from "./loans/loans.service";
 import { LoansController, ResourcesController, SpacesController, StaffController } from "./phase5.controllers";
+import { MaintenanceService } from "./maintenance/maintenance.service";
+import { CustodyService } from "./custody/custody.service";
+import { InventoryService } from "./inventory/inventory.service";
+import { PurchasingService } from "./purchasing/purchasing.service";
+import { CustodyController, InventoryController, MaintenanceController, PurchasingController } from "./phase6.controllers";
 
 @Module({
   imports: [
@@ -39,7 +44,7 @@ import { LoansController, ResourcesController, SpacesController, StaffController
     // حد عام سخي لكل عنوان؛ مسارات الدخول لها حد أضيق (@Throttle)
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 600 }]),
   ],
-  controllers: [AuthController, HierarchyController, BrandingController, DashboardController, UsersController, HealthController, CatalogController, AssetsController, StockController, SuppliersController, SpacesController, StaffController, ResourcesController, LoansController],
+  controllers: [AuthController, HierarchyController, BrandingController, DashboardController, UsersController, HealthController, CatalogController, AssetsController, StockController, SuppliersController, SpacesController, StaffController, ResourcesController, LoansController, MaintenanceController, CustodyController, InventoryController, PurchasingController],
   providers: [
     AuditService,
     AccessService,
@@ -57,6 +62,10 @@ import { LoansController, ResourcesController, SpacesController, StaffController
     StaffService,
     ResourcesService,
     LoansService,
+    MaintenanceService,
+    CustodyService,
+    InventoryService,
+    PurchasingService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AppGuard },
   ],

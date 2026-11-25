@@ -134,7 +134,8 @@ export class AssetsService {
     };
   }
 
-  private async generateNumber(tx: Prisma.TransactionClient, schoolId: string) {
+  /** رقم جرد جديد حسب صيغة المؤسسة (يُستعمل أيضاً عند إدخال ممتلكات من الاقتناء). */
+  async generateNumber(tx: Prisma.TransactionClient, schoolId: string) {
     const [settings, school] = await Promise.all([
       tx.schoolSettings.findUnique({ where: { schoolId } }),
       tx.school.findUniqueOrThrow({ where: { id: schoolId }, select: { adminCode: true } }),

@@ -402,3 +402,180 @@ export const loanReturnSchema = z.object({
   clientOpId: z.string().max(80).optional(),
 });
 export type LoanReturnInput = z.infer<typeof loanReturnSchema>;
+
+// =====================================================================
+// المرحلة 6: الصيانة، العهدة، الجرد، الطلبيات والاقتناء
+// =====================================================================
+const longText = z.string().trim().max(2000, "errors.tooLong").optional().or(z.literal(""));
+const reqDate = req(z.string()).regex(/^\d{4}-\d{2}-\d{2}$/, "errors.date");
+
+/** هدف واحد بالضبط: ممتلك أو فضاء أو ملعب أو وحدة وسيلة. */
+export const MAINTENANCE_TARGETS = ["asset", "room", "facility", "resourceUnit"] as const;
+export const MAINTENANCE_TYPES = ["PREVENTIVE", "CORRECTIVE", "EMERGENCY"] as const;
+export const URGENCIES = ["LOW", "NORMAL", "HIGH", "CRITICAL"] as const;
+export const MAINTENANCE_STATUSES = ["NEW", "UNDER_REVIEW", "IN_REPAIR", "REPAIRED", "UNREPAIRABLE", "CLOSED"] as const;
+export type MaintenanceStatusCode = (typeof MAINTENANCE_STATUSES)[number];
+
+export const maintenanceRequestSchema = z.object({
+  targetType: z.enum(MAINTENANCE_TARGETS),
+  targetId: req(z.string()),
+  type: z.enum(MAINTENANCE_TYPES),
+  damageTypeId: optId,
+  description: req(z.string()).max(2000, "errors.tooLong"),
+  urgency: z.enum(URGENCIES),
+  assigneeId: optId,
+  photoDataUrl: z.string().max(3_000_000).optional().nullable(),
+  clientOpId: z.string().max(80).optional(),
+});
+export type MaintenanceRequestInput = z.infer<typeof maintenanceRequestSchema>;
+
+export const maintenanceTransitionSchema = z.object({
+  to: z.enum(MAINTENANCE_STATUSES),
+  note: z.string().trim().max(500, "errors.tooLong").optional().or(z.literal("")),
+});
+export type MaintenanceTransitionInput = z.infer<typeof maintenanceTransitionSchema>;
+
+/** تدخل: الجهة المتدخلة، التكلفة، الفاتورة (اختيارية)، المحضر، والنتيجة. */
+export const maintenanceRecordSchema = z
+  .object({
+    contractor: optionalText,
+    cost: money,
+    interventionReport: longText,
+    startedAt: isoDate,
+    repairedAt: isoDate,
+    outcome: z.enum(["IN_REPAIR", "REPAIRED", "UNREPAIRABLE"]),
+    invoice: z
+      .object({ supplierId: req(z.string()), invoiceNumber: req(z.string()).max(60, "errors.tooLong"), invoiceDate: reqDate, amount: z.number({ error: "errors.number" }).min(0, "errors.nonNegative").max(1_000_000_000, "errors.tooLarge") })
+      .optional()
+      .nullable(),
+  })
+  .refine((v) => v.outcome !== "REPAIRED" || !!v.repairedAt, { message: "errors.required", path: ["repairedAt"] });
+export type MaintenanceRecordInput = z.infer<typeof maintenanceRecordSchema>;
+
+export const maintenanceScheduleSchema = z.object({
+  title: req(z.string()).max(200, "errors.tooLong"),
+  targetType: z.enum(MAINTENANCE_TARGETS),
+  targetId: req(z.string()),
+  intervalDays: z.number({ error: "errors.number" }).int("errors.integer").min(1, "errors.positive").max(3650, "errors.tooLarge"),
+  nextDueAt: reqDate,
+  remindDaysBefore: z.number({ error: "errors.number" }).int("errors.integer").min(0, "errors.nonNegative").max(365, "errors.tooLarge"),
+  isActive: z.boolean().optional(),
+});
+export type MaintenanceScheduleInput = z.infer<typeof maintenanceScheduleSchema>;
+
+export const CUSTODY_ACTIONS = ["HANDOVER", "ASSIGNMENT", "RELOCATION", "TRANSFER", "RETURN"] as const;
+export const custodySchema = z
+  .object({
+    action: z.enum(CUSTODY_ACTIONS),
+    assetId: req(z.string()),
+    toStaffId: optId,
+    toRoomId: optId,
+    occurredAt: isoDate,
+    notes: longText,
+    clientOpId: z.string().max(80).optional(),
+  })
+  .refine((v) => !["HANDOVER", "ASSIGNMENT", "TRANSFER"].includes(v.action) || !!v.toStaffId, { message: "errors.required", path: ["toStaffId"] })
+  .refine((v) => v.action !== "RELOCATION" || !!v.toRoomId, { message: "errors.required", path: ["toRoomId"] });
+export type CustodyInput = z.infer<typeof custodySchema>;
+
+export const INVENTORY_TYPES = ["ANNUAL", "PERIODIC", "EXCEPTIONAL"] as const;
+export const inventorySessionSchema = z
+  .object({
+    type: z.enum(INVENTORY_TYPES),
+    startDate: reqDate,
+    endDate: reqDate,
+    includesStock: z.boolean(),
+    roomIds: z.array(z.string().uuid()).max(500),
+    assigneeIds: z.array(z.string().uuid()).max(50),
+  })
+  .refine((v) => v.endDate >= v.startDate, { message: "errors.endBeforeStart", path: ["endDate"] });
+export type InventorySessionInput = z.infer<typeof inventorySessionSchema>;
+
+/** سطر عدّ: بمعرّف السطر أو برمز QR (ممتلك/وحدة). */
+export const inventoryCountSchema = z
+  .object({
+    lineId: optId,
+    qrToken: z.string().max(80).optional().or(z.literal("")),
+    countedQty: z.number({ error: "errors.number" }).min(0, "errors.nonNegative").max(1_000_000_000, "errors.tooLarge"),
+    foundRoomId: optId,
+    conditionFound: optionalText,
+    notes: optionalText,
+    clientOpId: z.string().max(80).optional(),
+  })
+  .refine((v) => !!v.lineId || !!v.qrToken, { message: "errors.required", path: ["lineId"] });
+export type InventoryCountInput = z.infer<typeof inventoryCountSchema>;
+
+export const inventoryValidateSchema = z.object({ reportNotes: req(z.string()).max(5000, "errors.tooLong") });
+
+export const PO_TARGETS = ["ASSET", "STOCK", "RESOURCE"] as const;
+export const approvalWorkflowSchema = z.object({
+  name: req(z.string()).max(150, "errors.tooLong"),
+  fundingSourceId: optId,
+  managingBody: optionalText,
+  isActive: z.boolean().optional(),
+  steps: z.array(z.object({ name: req(z.string()).max(150, "errors.tooLong"), requiredRoleCode: z.string().max(40).optional().or(z.literal("")).nullable() })).max(10),
+});
+export type ApprovalWorkflowInput = z.infer<typeof approvalWorkflowSchema>;
+
+export const purchaseOrderSchema = z.object({
+  title: req(z.string()).max(200, "errors.tooLong"),
+  needDescription: longText,
+  fundingSourceId: optId,
+  budgetLine: optionalText,
+  supplierId: optId,
+  items: z
+    .array(
+      z
+        .object({
+          description: req(z.string()).max(300, "errors.tooLong"),
+          quantity: qty,
+          unitId: optId,
+          estimatedUnitCost: money,
+          targetKind: z.enum(PO_TARGETS),
+          inventoryItemId: optId,
+        })
+        .refine((v) => v.targetKind !== "STOCK" || !!v.inventoryItemId, { message: "errors.required", path: ["inventoryItemId"] }),
+    )
+    .min(1, "errors.atLeastOneItem")
+    .max(100, "errors.tooLarge"),
+});
+export type PurchaseOrderInput = z.infer<typeof purchaseOrderSchema>;
+
+export const poSubmitSchema = z.object({ workflowId: optId });
+export const poDecisionSchema = z.object({ decision: z.enum(["APPROVED", "REJECTED"]), comment: z.string().trim().max(500, "errors.tooLong").optional().or(z.literal("")) });
+export const poOrderSchema = z.object({ supplierId: req(z.string()), orderDocRef: optionalText, orderedAt: isoDate });
+export const poCancelSchema = z.object({ reason });
+
+export const deliverySchema = z.object({
+  receivedAt: reqDate,
+  conformity: z.enum(["CONFORM", "NON_CONFORM", "PARTIAL"]),
+  conformityNotes: longText,
+  items: z
+    .array(
+      z
+        .object({ purchaseOrderItemId: req(z.string()), quantityReceived: z.number({ error: "errors.number" }).min(0, "errors.nonNegative"), quantityAccepted: z.number({ error: "errors.number" }).min(0, "errors.nonNegative") })
+        .refine((v) => v.quantityAccepted <= v.quantityReceived, { message: "errors.acceptedExceedsReceived", path: ["quantityAccepted"] }),
+    )
+    .min(1, "errors.atLeastOneItem"),
+  clientOpId: z.string().max(80).optional(),
+});
+export type DeliveryInput = z.infer<typeof deliverySchema>;
+
+/** إدخال سطر متسلَّم: إلى المخزون (مخزن) أو إلى الممتلكات (تصنيف، فردي/كمي، فضاء). */
+export const postDeliverySchema = z
+  .object({
+    deliveryItemId: req(z.string()),
+    warehouseId: optId,
+    categoryId: optId,
+    trackingMode: z.enum(["INDIVIDUAL", "QUANTITY"]).optional(),
+    roomId: optId,
+    unitCost: money,
+  });
+export type PostDeliveryInput = z.infer<typeof postDeliverySchema>;
+
+export const invoiceSchema = z.object({
+  invoiceNumber: req(z.string()).max(60, "errors.tooLong"),
+  invoiceDate: reqDate,
+  amount: z.number({ error: "errors.number" }).min(0, "errors.nonNegative").max(1_000_000_000, "errors.tooLarge"),
+});
+export type InvoiceInput = z.infer<typeof invoiceSchema>;

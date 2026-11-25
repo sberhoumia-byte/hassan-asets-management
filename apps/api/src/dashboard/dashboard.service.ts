@@ -36,6 +36,21 @@ export const ACTIVITY_KEYS: Record<string, string> = {
   RESOURCE_CREATE: "activity.resourceCreated",
   LOAN_CREATE: "activity.loanCreated",
   LOAN_RETURN: "activity.loanReturned",
+  MAINTENANCE_CREATE: "activity.maintenanceCreated",
+  MAINTENANCE_RECORD: "activity.maintenanceRecorded",
+  CUSTODY_HANDOVER: "activity.custodyHandover",
+  CUSTODY_ASSIGNMENT: "activity.custodyAssignment",
+  CUSTODY_RELOCATION: "activity.custodyRelocation",
+  CUSTODY_TRANSFER: "activity.custodyTransfer",
+  CUSTODY_RETURN: "activity.custodyReturn",
+  INVENTORY_CREATE: "activity.inventoryCreated",
+  INVENTORY_OPEN: "activity.inventoryOpened",
+  INVENTORY_VALIDATED: "activity.inventoryValidated",
+  INVENTORY_CLOSED: "activity.inventoryClosed",
+  PO_CREATE: "activity.poCreated",
+  PO_APPROVED: "activity.poApproved",
+  PO_REJECTED: "activity.poRejected",
+  PO_DELIVERY: "activity.poDelivered",
 };
 /** عمليات المراجع المشتركة (بلا مؤسسة) التي تظهر في نشاط كل مؤسسة. */
 const SHARED_ACTIONS = ["ACADEMY_CREATE", "DIRECTORATE_CREATE"];
@@ -72,7 +87,7 @@ export class DashboardService {
             FROM inventory_items i LEFT JOIN stock_balances b ON b."itemId" = i.id
             WHERE i."schoolId" = ${schoolId}::uuid AND i."isActive" GROUP BY i.id) t`;
     // نفس قاعدة StockService.levelOf
-    const [overdue, urgent, damaged, damagedUnits] = await Promise.all([
+    const [overdue, urgent, damaged, damagedUnits, schedules] = await Promise.all([
       p.resourceLoan.count({ where: { schoolId, status: { in: ["ACTIVE", "PARTIALLY_RETURNED"] }, dueAt: { lt: new Date() } } }),
       p.maintenanceRequest.count({
         where: { schoolId, urgency: { in: ["HIGH", "CRITICAL"] }, status: { notIn: ["REPAIRED", "UNREPAIRABLE", "CLOSED"] } },
@@ -80,12 +95,17 @@ export class DashboardService {
       p.educationalResource.aggregate({ where: { schoolId, archivedAt: null }, _sum: { quantityDamaged: true } }),
       // الوحدات الفردية المعطوبة (الأصناف الكمية تُحسب من quantityDamaged أعلاه)
       p.educationalResourceUnit.count({ where: { status: "DAMAGED", resource: { schoolId, archivedAt: null } } }),
+      // صيانة وقائية حلّ موعدها أو اقترب (حسب أيام التذكير لكل جدولة)
+      p.maintenanceSchedule.findMany({ where: { schoolId, isActive: true }, select: { nextDueAt: true, remindDaysBefore: true } }),
     ]);
+    const today = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00Z").getTime();
+    const due = schedules.filter((s) => s.nextDueAt.getTime() - s.remindDaysBefore * 86_400_000 <= today).length;
     const all = [
       { kind: "stockOut", count: Number(stock[0]?.out ?? 0), severity: "high" as const },
       { kind: "loansOverdue", count: overdue, severity: "high" as const },
       { kind: "maintenanceUrgent", count: urgent, severity: "high" as const },
       { kind: "stockLow", count: Number(stock[0]?.low ?? 0), severity: "medium" as const },
+      { kind: "maintenanceDue", count: due, severity: "medium" as const },
       { kind: "resourcesDamaged", count: (damaged._sum.quantityDamaged ?? 0) + damagedUnits, severity: "medium" as const },
     ];
     return all.filter((a) => a.count > 0);

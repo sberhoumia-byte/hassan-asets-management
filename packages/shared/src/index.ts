@@ -128,6 +128,18 @@ export const GLOBAL_LOOKUPS: Record<string, { code: string; ar: string; fr: stri
     { code: "GREEN", ar: "مساحة خضراء", fr: "Espace vert" },
     { code: "OTHER", ar: "فضاء آخر", fr: "Autre espace" },
   ],
+  DAMAGE_TYPE: [
+    { code: "ELECTRICAL", ar: "عطب كهربائي", fr: "Panne électrique" },
+    { code: "PLUMBING", ar: "سباكة وتسربات", fr: "Plomberie et fuites" },
+    { code: "CARPENTRY", ar: "نجارة وأبواب ونوافذ", fr: "Menuiserie, portes et fenêtres" },
+    { code: "MASONRY", ar: "بناء وتشققات", fr: "Maçonnerie et fissures" },
+    { code: "PAINT", ar: "صباغة", fr: "Peinture" },
+    { code: "GLASS", ar: "زجاج مكسور", fr: "Vitre cassée" },
+    { code: "IT", ar: "عطب معلوماتي", fr: "Panne informatique" },
+    { code: "FURNITURE", ar: "أثاث مكسور", fr: "Mobilier cassé" },
+    { code: "SPORTS", ar: "تجهيزات رياضية", fr: "Équipement sportif" },
+    { code: "OTHER", ar: "عطب آخر", fr: "Autre panne" },
+  ],
   MAINTENANCE_TYPE_LABEL: [
     { code: "PREVENTIVE", ar: "وقائية", fr: "Préventive" },
     { code: "CORRECTIVE", ar: "إصلاحية", fr: "Corrective" },
@@ -190,6 +202,7 @@ export * from "./schoolYear";
 export * from "./numbering";
 
 /** القوائم المرجعية التي تديرها المؤسسة من الواجهة (المرحلة 4، وأُضيفت FACILITY_TYPE و RESOURCE_TYPE في المرحلة 5). */
-export const LOOKUP_KEYS = ["ASSET_TYPE", "FUNDING_SOURCE", "UNIT_OF_MEASURE", "SUPPLIER_ACTIVITY", "CONDITION", "DOCUMENT_CATEGORY", "SPACE_TYPE", "FACILITY_TYPE", "RESOURCE_TYPE", "MAINTENANCE_TYPE_LABEL"] as const;
+export const LOOKUP_KEYS = ["ASSET_TYPE", "FUNDING_SOURCE", "UNIT_OF_MEASURE", "SUPPLIER_ACTIVITY", "CONDITION", "DOCUMENT_CATEGORY", "SPACE_TYPE", "FACILITY_TYPE", "RESOURCE_TYPE", "DAMAGE_TYPE", "MAINTENANCE_TYPE_LABEL"] as const;
 export type LookupKey = (typeof LOOKUP_KEYS)[number];
 export * from "./loans";
+export * from "./phase6";
