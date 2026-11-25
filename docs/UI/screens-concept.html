@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>تصور الشاشات الأولي</title>
+<!-- تصور ثابت للمراجعة فقط (المرحلة 1). في التطبيق الفعلي تُضمَّن الخطوط محلياً للعمل دون اتصال. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&family=Noto+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0B2545; --blue:#1D5FA8; --blue-50:#EAF1FA; --bg:#F4F6FA; --card:#fff;
+  --ink:#1B2333; --muted:#5C6B82; --line:#E1E6EE;
+  --ok:#1F8A5B; --warn:#C98A12; --bad:#C2413B; --info:#2C7BE5;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans Arabic",Tajawal,sans-serif;font-size:14px;line-height:1.6}
+h1,h2,h3{font-family:Cairo,Tajawal,sans-serif;margin:0}
+.switch{display:flex;gap:8px;flex-wrap:wrap;padding:14px 16px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.switch button{font-family:Tajawal;font-weight:500;border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 14px;cursor:pointer;color:var(--ink)}
+.switch button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.switch .note{margin-inline-start:auto;color:var(--muted);font-size:12px;align-self:center}
+.screen{display:none}.screen.on{display:block}
+
+/* ---------- login ---------- */
+.login{min-height:calc(100vh - 60px);display:grid;grid-template-columns:1fr 1fr}
+.login .brand{background:linear-gradient(160deg,var(--navy),var(--blue));color:#fff;padding:48px;display:flex;flex-direction:column;justify-content:center;gap:14px}
+.login .brand .logo{width:84px;height:84px;border-radius:20px;background:rgba(255,255,255,.12);display:grid;place-items:center;border:1px dashed rgba(255,255,255,.5);font-size:12px}
+.login .brand h1{font-size:28px}
+.login .brand p{opacity:.85;margin:0;font-family:Tajawal}
+.login form{display:flex;flex-direction:column;justify-content:center;padding:48px;max-width:460px;margin:auto;width:100%;gap:14px}
+label{font-family:Tajawal;font-weight:500;font-size:13px;color:var(--muted);display:block;margin-bottom:4px}
+.input,.select{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;font:inherit}
+.select{display:flex;justify-content:space-between;align-items:center;color:var(--ink)}
+.select::after{content:"▾";color:var(--muted)}
+.btn{font-family:Tajawal;font-weight:700;border:0;border-radius:10px;padding:10px 16px;background:var(--blue);color:#fff;cursor:pointer}
+.btn.ghost{background:#fff;color:var(--blue);border:1px solid var(--line)}
+.btn.danger{background:#fff;color:var(--bad);border:1px solid #f0c9c7}
+.lang{display:flex;gap:6px}.lang span{border:1px solid var(--line);border-radius:8px;padding:2px 10px;font-size:12px}.lang .on{background:var(--blue-50);border-color:var(--blue);color:var(--blue)}
+
+/* ---------- app shell ---------- */
+.app{display:grid;grid-template-columns:260px 1fr;min-height:calc(100vh - 60px)}
+.app.collapsed{grid-template-columns:72px 1fr}
+.side{background:var(--navy);color:#cfe0f5;padding:14px 10px;display:flex;flex-direction:column;gap:2px}
+.side .head{display:flex;align-items:center;gap:10px;padding:6px 8px 14px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:8px}
+.side .head .lg{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.12);flex:none}
+.side .head b{font-family:Cairo;color:#fff;font-size:14px;line-height:1.3}
+.nav{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;font-family:Tajawal;font-size:13.5px;white-space:nowrap;overflow:hidden}
+.nav i{font-style:normal;width:20px;text-align:center;flex:none;opacity:.9}
+.nav.on{background:var(--blue);color:#fff}
+.app.collapsed .nav span,.app.collapsed .side .head b{display:none}
+.main{min-width:0}
+.top{background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:10px 20px}
+.top .t{display:flex;flex-direction:column}
+.top .t b{font-family:Cairo;font-size:15px}.top .t small{color:var(--muted)}
+.top .sp{flex:1}
+.icon-btn{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);display:grid;place-items:center;background:#fff;cursor:pointer;position:relative}
+.user{display:flex;align-items:center;gap:8px}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--blue-50);display:grid;place-items:center;color:var(--blue);font-weight:700}
+.role{font-size:11px;background:var(--blue-50);color:var(--blue);border-radius:6px;padding:1px 6px}
+.content{padding:20px;display:flex;flex-direction:column;gap:18px}
+.grid{display:grid;gap:14px}
+.g4{grid-template-columns:repeat(4,1fr)}.g2{grid-template-columns:2fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+.card h3{font-size:15px;margin-bottom:10px}
+.stat{display:flex;gap:12px;align-items:center}
+.stat .ic{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:18px;flex:none}
+.stat .v{font-family:Cairo;font-size:22px;font-weight:800}
+.stat .l{color:var(--muted);font-size:12.5px;font-family:Tajawal}
+.ph{color:#9AA7BA}
+.chart{height:170px;border-radius:10px;background:repeating-linear-gradient(90deg,#F2F5FA 0 1px,transparent 1px 40px),#FAFBFD;border:1px dashed var(--line);display:grid;place-items:center;color:var(--muted);font-size:12px;text-align:center;padding:8px}
+.alert{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+.alert:last-child{border:0}
+.dot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none}
+.quick{display:flex;flex-wrap:wrap;gap:8px}
+.quick .btn{font-weight:500;font-size:13px}
+.empty{color:var(--muted);font-size:12.5px;padding:6px 0}
+.tag{display:inline-block;font-size:11px;padding:1px 8px;border-radius:999px;font-family:Tajawal}
+
+/* hierarchy */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.step{position:relative}
+.step .n{position:absolute;top:-10px;inset-inline-start:12px;background:var(--navy);color:#fff;border-radius:999px;font-size:11px;padding:0 8px}
+.dropdown{border:1px solid var(--blue);border-radius:10px;margin-top:6px;background:#fff;box-shadow:0 8px 24px rgba(11,37,69,.08)}
+.dropdown .s{padding:8px 10px;border-bottom:1px solid var(--line);color:var(--muted)}
+.dropdown .o{padding:7px 10px}.dropdown .o.on{background:var(--blue-50);color:var(--blue);font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-family:Tajawal;text-align:start;color:var(--muted);font-weight:500;padding:8px;border-bottom:1px solid var(--line);background:#FAFBFD}
+td{padding:8px;border-bottom:1px solid var(--line)}
+
+/* branding */
+.brand-grid{display:grid;grid-template-columns:420px 1fr;gap:18px;align-items:start}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.tabs span{padding:6px 12px;font-family:Tajawal;font-size:13px;color:var(--muted)}
+.tabs .on{color:var(--blue);border-bottom:2px solid var(--blue);font-weight:700}
+.upload{border:1.5px dashed #BFD0E6;border-radius:12px;padding:14px;text-align:center;color:var(--muted);background:#FAFCFF}
+.row{display:flex;gap:10px}.row>*{flex:1}
+.toggle{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:13px}
+.sw{width:34px;height:20px;border-radius:999px;background:var(--blue);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:3px;inset-inline-end:3px;width:14px;height:14px;border-radius:50%;background:#fff}
+.sw.off{background:#C9D2DF}.sw.off::after{inset-inline-end:auto;inset-inline-start:3px}
+.radio{display:flex;gap:14px;font-size:13px}.radio span::before{content:"◯ ";color:var(--muted)}.radio .on::before{content:"◉ ";color:var(--blue)}
+.preview-wrap{background:#DDE3EC;border-radius:14px;padding:22px;display:flex;justify-content:center}
+.a4{width:420px;aspect-ratio:210/297;background:#fff;box-shadow:0 6px 24px rgba(0,0,0,.12);padding:22px 26px;display:flex;flex-direction:column;font-size:9px}
+.lh{display:grid;grid-template-columns:1fr 64px 1fr;align-items:center;gap:8px;border-bottom:1.5px solid var(--navy);padding-bottom:8px}
+.lh .r{text-align:right;line-height:1.55}.lh .l{text-align:left;line-height:1.55;direction:ltr;font-family:Tajawal}
+.lh .lg{width:54px;height:54px;border:1px dashed #9AA7BA;border-radius:8px;margin:auto;display:grid;place-items:center;color:#9AA7BA;font-size:8px}
+.a4 h4{font-family:Cairo;text-align:center;font-size:12px;margin:14px 0 8px}
+.a4 table{font-size:8px}.a4 th,.a4 td{padding:4px;border:1px solid #E1E6EE}
+.a4 .ft{margin-top:auto;border-top:1px solid var(--line);padding-top:6px;display:flex;justify-content:space-between;color:var(--muted)}
+.legend{font-size:12px;color:var(--muted);margin-top:8px}
+@media (max-width:900px){
+  .login{grid-template-columns:1fr}.login .brand{padding:28px}
+  .app{grid-template-columns:1fr}.side{display:none}
+  .g4{grid-template-columns:repeat(2,1fr)}.g2,.g3,.steps,.brand-grid{grid-template-columns:1fr}
+  .a4{width:100%}
+}
+</style>
+</head>
+<body>
+<div class="switch">
+  <button class="on" data-s="login">تسجيل الدخول</button>
+  <button data-s="dash">لوحة القيادة</button>
+  <button data-s="org">الأكاديمية ← المديرية ← المؤسسة</button>
+  <button data-s="brand">الهوية البصرية والترويسة</button>
+  <span class="note">تصور أولي ثابت للمراجعة — ليس التطبيق الفعلي. الخانات «—» تُملأ من قاعدة البيانات.</span>
+</div>
+
+<!-- ================= LOGIN ================= -->
+<section class="screen on" id="login">
+  <div class="login">
+    <div class="brand">
+      <div class="logo">شعار المؤسسة</div>
+      <h1>HASSAN IBN THABIT<br>ASSETS MANAGEMENT</h1>
+      <p>نظام التدبير المادي لمؤسسة حسان بن ثابت بأورير</p>
+      <p style="font-size:13px">التدبير المادي الذكي – من أجل مؤسسة منظمة وذات جودة للجميع</p>
+    </div>
+    <form onsubmit="return false">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h2 style="font-size:22px">تسجيل الدخول</h2>
+        <div class="lang"><span class="on">العربية</span><span>Français</span></div>
+      </div>
+      <div><label>اسم المستخدم</label><input class="input" placeholder="اسم المستخدم"></div>
+      <div><label>كلمة المرور</label><input class="input" type="password" placeholder="••••••••••"></div>
+      <div><label>المؤسسة (تظهر بعد التحقق إن كان للمستخدم أكثر من مؤسسة)</label><div class="select">مؤسسة حسان بن ثابت الابتدائية بأورير</div></div>
+      <button class="btn">دخول</button>
+      <small style="color:var(--muted)">يُقفل الحساب مؤقتاً بعد 5 محاولات فاشلة.</small>
+    </form>
+  </div>
+</section>
+
+<!-- ================= SHELL (shared) ================= -->
+<template id="shell">
+  <div class="app">
+    <aside class="side">
+      <div class="head"><div class="lg"></div><b>التدبير المادي<br><small style="font-weight:400;color:#a9c1e0">حسان بن ثابت</small></b></div>
+      <div class="nav" data-k="dash"><i>▦</i><span>لوحة القيادة</span></div>
+      <div class="nav"><i>▣</i><span>الممتلكات والتجهيزات</span></div>
+      <div class="nav"><i>▤</i><span>المخزون</span></div>
+      <div class="nav"><i>⌂</i><span>البنايات والفضاءات</span></div>
+      <div class="nav"><i>⚑</i><span>الملاعب والمرافق</span></div>
+      <div class="nav"><i>✎</i><span>الوسائل التعليمية</span></div>
+      <div class="nav"><i>⇄</i><span>الإعارة والإرجاع</span></div>
+      <div class="nav"><i>☑</i><span>الجرد المادي</span></div>
+      <div class="nav"><i>⚒</i><span>الصيانة والإصلاح</span></div>
+      <div class="nav"><i>⛟</i><span>الطلبيات والاقتناء</span></div>
+      <div class="nav"><i>⇆</i><span>العهدة والتسليم</span></div>
+      <div class="nav"><i>☏</i><span>الموردون</span></div>
+      <div class="nav"><i>⌖</i><span>المخطط التفاعلي للمؤسسة</span></div>
+      <div class="nav"><i>⇅</i><span>Excel والاستيراد والتصدير</span></div>
+      <div class="nav"><i>▢</i><span>الوثائق والأرشيف</span></div>
+      <div class="nav"><i>◔</i><span>التقارير والإحصائيات</span></div>
+      <div class="nav"><i>☺</i><span>المستخدمون والصلاحيات</span></div>
+      <div class="nav" data-k="settings"><i>⚙</i><span>إعدادات النظام والهوية البصرية</span></div>
+    </aside>
+    <div class="main">
+      <div class="top">
+        <button class="icon-btn" title="طي القائمة" onclick="this.closest('.app').classList.toggle('collapsed')">☰</button>
+        <div class="t"><b>مؤسسة حسان بن ثابت الابتدائية بأورير</b><small>HASSAN IBN THABIT – ASSETS MANAGEMENT</small></div>
+        <div class="sp"></div>
+        <small style="color:var(--muted)" class="clock"></small>
+        <button class="icon-btn" title="الإشعارات">🔔</button>
+        <div class="user"><div class="avatar">م</div><div><div style="font-size:13px">اسم المستخدم</div><span class="role">DIRECTOR</span></div></div>
+        <button class="icon-btn" title="تسجيل الخروج">⎋</button>
+      </div>
+      <div class="content slot"></div>
+    </div>
+  </div>
+</template>
+
+<!-- ================= DASHBOARD ================= -->
+<section class="screen" id="dash" data-shell="dash">
+  <div class="grid g4">
+    <div class="card stat"><div class="ic" style="background:#EAF1FA;color:var(--blue)">▣</div><div><div class="v ph">—</div><div class="l">الممتلكات والتجهيزات</div></div></div>
+    <div class="card stat"><div class="ic" style="background:#E8F6EF;color:var(--ok)">▤</div><div><div class="v ph">—</div><div class="l">مواد المخزون</div></div></div>
+    <div class="card stat"><div class="ic" style="background:#EEF0FB;color:#4B55C0">⌂</div><div><div class="v ph">—</div><div class="l">البنايات والحجرات</div></div></div>
+    <div class="card stat"><div class="ic" style="background:#F3EEFB;color:#7A4BC0">⚑</div><div><div class="v ph">—</div><div class="l">المرافق والملاعب</div></div></div>
+    <div class="card stat"><div class="ic" style="background:#EAF6FA;color:#1F7F9A">✎</div><div><div class="v ph">—</div><div class="l">الوسائل التعليمية</div></div></div>
+    <div class="card stat"><div class="ic" style="background:#EAF1FA;color:var(--info)">⇄</div><div><div class="v ph">—</div><div class="l">الإعارات الجارية</div></div></div>
+    <div class="card stat"><div class="ic" style="background:#FBEDEC;color:var(--bad)">⏱</div><div><div class="v ph">—</div><div class="l">الإعارات المتأخرة</div></div></div>
+    <div class="card stat"><div class="ic" style="background:#FBF4E6;color:var(--warn)">⚒</div><div><div class="v ph">—</div><div class="l">طلبات صيانة مفتوحة</div></div></div>
+  </div>
+
+  <div class="card"><h3>الوصول السريع</h3>
+    <div class="quick">
+      <button class="btn">+ إضافة ممتلك</button><button class="btn ghost">+ مادة للمخزون</button><button class="btn ghost">تسجيل إعارة</button><button class="btn ghost">تسجيل إرجاع</button><button class="btn ghost">عملية جرد</button><button class="btn ghost">طلب صيانة</button><button class="btn ghost">إنشاء تقرير</button><button class="btn ghost">استيراد Excel</button>
+    </div>
+  </div>
+
+  <div class="grid g2">
+    <div class="grid" style="grid-template-columns:1fr 1fr">
+      <div class="card"><h3>توزيع الممتلكات حسب التصنيف</h3><div class="chart">رسم دائري — من جدول assets</div></div>
+      <div class="card"><h3>حالة المخزون</h3><div class="chart">أعمدة: عادي / منخفض / نافد</div></div>
+      <div class="card"><h3>تطور عمليات الاقتناء</h3><div class="chart">خط زمني شهري</div></div>
+      <div class="card"><h3>حالة الإعارات</h3><div class="chart">جارية / متأخرة / مسترجعة</div></div>
+    </div>
+    <div class="grid">
+      <div class="card"><h3>التنبيهات</h3>
+        <div class="alert"><span class="dot" style="background:var(--bad)"></span><div>مواد نفدت من المخزون <span class="tag" style="background:#FBEDEC;color:var(--bad)">—</span></div></div>
+        <div class="alert"><span class="dot" style="background:var(--warn)"></span><div>مواد بلغت الحد الأدنى <span class="tag" style="background:#FBF4E6;color:var(--warn)">—</span></div></div>
+        <div class="alert"><span class="dot" style="background:var(--bad)"></span><div>إعارات تجاوزت تاريخ الإرجاع <span class="tag" style="background:#FBEDEC;color:var(--bad)">—</span></div></div>
+        <div class="alert"><span class="dot" style="background:var(--warn)"></span><div>طلبات صيانة مستعجلة <span class="tag" style="background:#FBF4E6;color:var(--warn)">—</span></div></div>
+        <div class="alert"><span class="dot" style="background:var(--info)"></span><div>مواعيد الجرد ووثائق للمتابعة</div></div>
+      </div>
+      <div class="card"><h3>آخر العمليات</h3>
+        <div class="empty">لا توجد عمليات بعد. ستظهر هنا آخر الإضافات والصرف والإعارات والجرد والصيانة من سجل التدقيق.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ORG HIERARCHY ================= -->
+<section class="screen" id="org" data-shell="settings">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <h2 style="font-size:19px">الأكاديمية والمديرية والمؤسسة</h2>
+    <div class="quick"><button class="btn ghost">استيراد المؤسسات من Excel</button><button class="btn">+ مؤسسة جديدة</button></div>
+  </div>
+  <div class="card">
+    <div class="steps">
+      <div class="step"><span class="n">1</span><label>الأكاديمية الجهوية للتربية والتكوين</label><div class="select">جهة سوس ماسة</div></div>
+      <div class="step"><span class="n">2</span><label>المديرية الإقليمية (التابعة للأكاديمية فقط)</label><div class="select">أكادير إداوتنان</div></div>
+      <div class="step"><span class="n">3</span><label>المؤسسة (بحث بالاسم أو الرمز الإداري)</label>
+        <div class="select" style="border-color:var(--blue)">مؤسسة حسان بن ثابت الابتدائية بأورير</div>
+        <div class="dropdown"><div class="s">🔍 ابحث باسم المؤسسة أو الرمز...</div><div class="o on">مؤسسة حسان بن ثابت الابتدائية بأورير</div><div class="o" style="color:var(--muted)">… المؤسسات المسجلة الأخرى في المديرية</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="card"><h3>المؤسسات المسجلة في المديرية</h3>
+    <table><thead><tr><th>المؤسسة</th><th>الرمز الإداري</th><th>السلك</th><th>المستخدمون المرتبطون</th><th></th></tr></thead>
+    <tbody><tr><td>مؤسسة حسان بن ثابت الابتدائية بأورير</td><td class="ph">يُدخله المدير</td><td>ابتدائي</td><td class="ph">—</td><td><button class="btn ghost" style="padding:4px 10px">تعديل</button></td></tr></tbody></table>
+  </div>
+</section>
+
+<!-- ================= BRANDING ================= -->
+<section class="screen" id="brand" data-shell="settings">
+  <h2 style="font-size:19px">إعدادات الهوية البصرية وترويسة المؤسسة</h2>
+  <div class="brand-grid">
+    <div class="card">
+      <div class="tabs"><span>معلومات المؤسسة</span><span>الشعار</span><span class="on">الترويسة</span><span>الطباعة</span></div>
+      <label>مصدر الترويسة</label>
+      <div class="radio" style="margin-bottom:12px"><span>رفع صورة ترويسة</span><span class="on">إنشاء ترويسة داخل التطبيق</span></div>
+      <div class="upload" style="margin-bottom:12px">الشعار الحالي يُستعمل تلقائياً · <a href="#" style="color:var(--blue)">تغيير الشعار</a></div>
+      <label>السطور (كلها قابلة للتعديل)</label>
+      <input class="input" value="المملكة المغربية" style="margin-bottom:6px">
+      <input class="input" value="وزارة التربية الوطنية والتعليم الأولي والرياضة" style="margin-bottom:6px">
+      <input class="input" value="الأكاديمية الجهوية للتربية والتكوين لجهة سوس ماسة" style="margin-bottom:6px">
+      <input class="input" value="المديرية الإقليمية أكادير إداوتنان" style="margin-bottom:6px">
+      <input class="input" value="مؤسسة حسان بن ثابت الابتدائية بأورير" style="margin-bottom:12px">
+      <div class="row"><div><label>ارتفاع الترويسة (مم)</label><div class="select">35</div></div><div><label>الهوامش (مم)</label><div class="select">15</div></div></div>
+      <div style="margin-top:10px">
+        <div class="toggle">إظهار الشعار<span class="sw"></span></div>
+        <div class="toggle">إظهار معلومات الاتصال<span class="sw off"></span></div>
+        <div class="toggle">ترقيم الصفحات<span class="sw"></span></div>
+      </div>
+      <label style="margin-top:8px">موضع الترويسة</label>
+      <div class="radio"><span>الصفحة الأولى فقط</span><span class="on">جميع الصفحات</span></div>
+      <div class="quick" style="margin-top:16px"><button class="btn">حفظ</button><button class="btn ghost">معاينة PDF</button><button class="btn ghost">تجربة على نموذج تقرير</button><button class="btn danger">استعادة الافتراضي</button></div>
+    </div>
+    <div>
+      <div class="preview-wrap">
+        <div class="a4">
+          <div class="lh">
+            <div class="r">المملكة المغربية<br>وزارة التربية الوطنية والتعليم الأولي والرياضة<br>الأكاديمية الجهوية للتربية والتكوين لجهة سوس ماسة<br>المديرية الإقليمية أكادير إداوتنان<br><b>مؤسسة حسان بن ثابت الابتدائية بأورير</b></div>
+            <div class="lg">الشعار</div>
+            <div class="l">Royaume du Maroc<br>Ministère de l'Éducation Nationale,<br>du Préscolaire et des Sports<br>AREF Souss-Massa<br>DP Agadir Ida-Outanane</div>
+          </div>
+          <h4>نموذج تقرير: جرد الممتلكات</h4>
+          <table><thead><tr><th>رقم الجرد</th><th>الممتلك</th><th>التصنيف</th><th>الموقع</th><th>الحالة</th></tr></thead>
+          <tbody><tr><td class="ph">—</td><td class="ph">—</td><td class="ph">—</td><td class="ph">—</td><td class="ph">—</td></tr><tr><td class="ph">—</td><td class="ph">—</td><td class="ph">—</td><td class="ph">—</td><td class="ph">—</td></tr></tbody></table>
+          <div class="ft"><span>التدبير المادي الذكي – من أجل مؤسسة منظمة وذات جودة للجميع</span><span>صفحة 1 / 1</span></div>
+        </div>
+      </div>
+      <div class="legend">معاينة A4 حية: أي تعديل على اليسار يظهر هنا فوراً، ويُطبَّق تلقائياً على كل التقارير والمحاضر الجديدة.</div>
+    </div>
+  </div>
+</section>
+
+<script>
+const tpl=document.getElementById('shell');
+document.querySelectorAll('[data-shell]').forEach(sec=>{
+  const inner=[...sec.childNodes];const shell=tpl.content.cloneNode(true);
+  const slot=shell.querySelector('.slot');inner.forEach(n=>slot.appendChild(n));
+  shell.querySelectorAll('.nav').forEach(n=>{if(n.dataset.k===sec.dataset.shell)n.classList.add('on')});
+  sec.appendChild(shell);
+});
+document.querySelectorAll('.switch button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.switch button,.screen').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');document.getElementById(b.dataset.s).classList.add('on');
+});
+const fmt=new Intl.DateTimeFormat('ar-MA',{dateStyle:'full',timeStyle:'short'});
+const tick=()=>document.querySelectorAll('.clock').forEach(c=>c.textContent=fmt.format(new Date()));tick();setInterval(tick,30000);
+const p=new URLSearchParams(location.search).get('s');if(p){document.querySelector(`.switch [data-s="${p}"]`)?.click()}
+</script>
+</body>
+</html>

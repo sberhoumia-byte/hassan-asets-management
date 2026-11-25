@@ -1,0 +1,14 @@
+node_modules/
+dist/
+build/
+coverage/
+.env
+.env.*
+!.env.example
+storage/*
+!storage/.gitkeep
+backups/
+*.log
+.DS_Store
+apps/android/app/build/
+apps/desktop/out/

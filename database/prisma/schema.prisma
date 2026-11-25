@@ -1,0 +1,1583 @@
+// =====================================================================
+// HASSAN IBN THABIT – ASSETS MANAGEMENT SYSTEM
+// مخطط قاعدة البيانات (PostgreSQL + Prisma) — المرحلة الأولى: تصميم
+// ---------------------------------------------------------------------
+// مبادئ عامة:
+//  - كل الجداول الخاصة بمؤسسة تحمل schoolId (عزل البيانات بين المؤسسات).
+//  - المعرفات UUID.
+//  - القيود التي لا يعبّر عنها Prisma (فهارس جزئية، CHECK، منع تعديل
+//    سجل التدقيق) موجودة في database/prisma/sql/constraints.sql
+//    وتُضاف إلى أول migration في المرحلة الثالثة.
+//  - لا حذف فعلي للسجلات الحساسة: archivedAt / cancelledAt + سجل تدقيق.
+// =====================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------
+// التعدادات (Enums): فقط للحالات التي يعتمد عليها منطق النظام.
+// القوائم التي يعدّلها المستخدم (أنواع، مصادر، وحدات...) في LookupValue.
+// ---------------------------------------------------------------------
+
+enum Locale {
+  ar
+  fr
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DISABLED
+}
+
+enum AssetStatus {
+  AVAILABLE // متاح
+  DAMAGED // معطوب
+  UNDER_REPAIR // قيد الإصلاح
+  DISPOSED // مستبعد
+}
+
+enum TrackingMode {
+  INDIVIDUAL // وحدات فردية لكل منها رقم جرد
+  QUANTITY // صنف كمي
+}
+
+enum ResourceUnitStatus {
+  AVAILABLE // متاحة
+  ON_LOAN // معارة (التأخر يُحتسب من dueAt)
+  DAMAGED // معطوبة
+  UNDER_MAINTENANCE // قيد الصيانة
+  DISPOSED // مستبعدة
+}
+
+enum SpaceStatus {
+  GOOD
+  NEEDS_MAINTENANCE
+  OUT_OF_SERVICE
+}
+
+enum StockMovementType {
+  OPENING // رصيد افتتاحي
+  IN // إدخال
+  OUT // صرف
+  TRANSFER_OUT // تحويل (خروج)
+  TRANSFER_IN // تحويل (دخول)
+  RETURN // إرجاع
+  ADJUSTMENT // تسوية (صلاحية خاصة)
+  REVERSAL // عكس حركة معتمدة (بدل الحذف)
+}
+
+enum LoanStatus {
+  ACTIVE // جارية
+  PARTIALLY_RETURNED // مسترجعة جزئياً
+  RETURNED // مسترجعة
+  CANCELLED
+}
+
+enum MaintenanceType {
+  PREVENTIVE // وقائية
+  CORRECTIVE // إصلاحية
+  EMERGENCY // استعجالية
+}
+
+enum MaintenanceStatus {
+  NEW // جديد
+  UNDER_REVIEW // قيد الدراسة
+  IN_REPAIR // قيد الإصلاح
+  REPAIRED // تم الإصلاح
+  UNREPAIRABLE // غير قابل للإصلاح
+  CLOSED // مغلق
+}
+
+enum Urgency {
+  LOW
+  NORMAL
+  HIGH
+  CRITICAL
+}
+
+enum InventorySessionType {
+  ANNUAL // سنوي
+  PERIODIC // دوري
+  EXCEPTIONAL // استثنائي
+}
+
+enum InventorySessionStatus {
+  DRAFT
+  OPEN
+  COUNTING_DONE
+  VALIDATED // مصادق عليه
+  CLOSED
+  ARCHIVED
+}
+
+enum InventoryItemKind {
+  ASSET
+  RESOURCE_UNIT
+  RESOURCE_QUANTITY
+  STOCK_ITEM
+}
+
+enum PurchaseOrderStatus {
+  NEED_RECORDED // تسجيل الحاجة
+  ESTIMATED
+  PENDING_APPROVAL
+  APPROVED
+  ORDERED
+  PARTIALLY_DELIVERED
+  DELIVERED
+  INVOICED
+  CLOSED
+  REJECTED
+  CANCELLED
+}
+
+enum ApprovalDecision {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ConformityResult {
+  CONFORM
+  NON_CONFORM
+  PARTIAL
+}
+
+enum CustodyAction {
+  HANDOVER // تسليم لموظف
+  ASSIGNMENT // إسناد لمسؤول
+  RELOCATION // نقل بين الفضاءات
+  TRANSFER // تحويل عهدة
+  RETURN // إرجاع
+}
+
+enum StaffType {
+  TEACHER
+  ADMINISTRATIVE
+  SUPPORT
+  OTHER
+}
+
+enum NotificationType {
+  STOCK_LOW
+  STOCK_OUT
+  STOCK_EXPIRY
+  LOAN_OVERDUE
+  MAINTENANCE_URGENT
+  INVENTORY_SESSION
+  APPROVAL_REQUEST
+  DELIVERY_RECEIVED
+  DOCUMENT_EXPIRY
+  SYSTEM
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL // قابلة للتوسعة لاحقاً
+}
+
+enum SyncStatus {
+  RECEIVED
+  APPLIED
+  CONFLICT
+  REJECTED
+}
+
+enum BackupKind {
+  DATABASE
+  FILES
+  SETTINGS
+  FULL
+}
+
+enum BackupStatus {
+  RUNNING
+  SUCCEEDED
+  FAILED
+  VERIFIED
+  RESTORED
+}
+
+enum ImportStatus {
+  UPLOADED
+  MAPPED
+  VALIDATED
+  COMMITTED
+  FAILED
+  CANCELLED
+}
+
+enum LetterheadMode {
+  IMAGE // صورة مرفوعة
+  GENERATED // مُنشأة داخل التطبيق
+}
+
+enum LetterheadPlacement {
+  FIRST_PAGE
+  ALL_PAGES
+}
+
+enum MapShapeKind {
+  POLYGON
+  RECTANGLE
+  CIRCLE
+  MARKER
+}
+
+// =====================================================================
+// 1. التسلسل الإداري: الأكاديمية ← المديرية ← المؤسسة (مرجع مشترك)
+// =====================================================================
+
+model Academy {
+  id           String                  @id @default(uuid()) @db.Uuid
+  code         String?                 @unique
+  nameAr       String
+  nameFr       String?
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+  directorates ProvincialDirectorate[]
+
+  @@unique([nameAr])
+  @@map("academies")
+}
+
+model ProvincialDirectorate {
+  id        String   @id @default(uuid()) @db.Uuid
+  academyId String   @db.Uuid
+  code      String?
+  nameAr    String
+  nameFr    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  academy   Academy  @relation(fields: [academyId], references: [id], onDelete: Restrict)
+  schools   School[]
+
+  @@unique([academyId, nameAr])
+  @@unique([academyId, code])
+  @@index([academyId])
+  @@map("provincial_directorates")
+}
+
+model School {
+  id                   String                 @id @default(uuid()) @db.Uuid
+  directorateId        String                 @db.Uuid
+  adminCode            String?                @unique // الرمز الإداري
+  nameAr               String
+  nameFr               String?
+  cycle                String? // ابتدائي، إعدادي...
+  address              String?
+  phone                String?
+  email                String?
+  isActive             Boolean                @default(true)
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  directorate          ProvincialDirectorate  @relation(fields: [directorateId], references: [id], onDelete: Restrict)
+  settings             SchoolSettings?
+  branding             BrandingSettings?
+  schoolYears          SchoolYear[]
+  userRoles            UserRole[]
+  letterheads          Letterhead[]
+  lookupValues         LookupValue[]
+  assetCategories      AssetCategory[]
+  assets               Asset[]
+  buildings            Building[]
+  rooms                Room[]
+  facilities           Facility[]
+  warehouses           Warehouse[]
+  inventoryItems       InventoryItem[]
+  stockMovements       StockMovement[]
+  suppliers            Supplier[]
+  purchaseOrders       PurchaseOrder[]
+  approvalWorkflows    ApprovalWorkflow[]
+  deliveries           Delivery[]
+  invoices             Invoice[]
+  resources            EducationalResource[]
+  staff                StaffMember[]
+  classes              SchoolClass[]
+  loans                ResourceLoan[]
+  maintenanceRequests  MaintenanceRequest[]
+  maintenanceSchedules MaintenanceSchedule[]
+  inventorySessions    InventorySession[]
+  custodyRecords       CustodyRecord[]
+  documents            Document[]
+  files                StoredFile[]
+  notifications        Notification[]
+  auditLogs            AuditLog[]
+  syncOperations       OfflineSyncOperation[]
+  backups              BackupRecord[]
+  importJobs           ImportJob[]
+  reportTemplates      ReportTemplate[]
+  floorPlans           FloorPlan[]
+  sequences            NumberSequence[]
+
+  @@index([directorateId])
+  @@index([nameAr])
+  @@map("schools")
+}
+
+model SchoolYear {
+  id        String        @id @default(uuid()) @db.Uuid
+  schoolId  String        @db.Uuid
+  label     String // مثال: 2026/2027
+  startDate DateTime      @db.Date
+  endDate   DateTime      @db.Date
+  isCurrent Boolean       @default(false)
+  school    School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classes   SchoolClass[]
+
+  @@unique([schoolId, label])
+  @@map("school_years")
+}
+
+model SchoolSettings {
+  id                     String   @id @default(uuid()) @db.Uuid
+  schoolId               String   @unique @db.Uuid
+  defaultLocale          Locale   @default(ar)
+  currency               String   @default("MAD")
+  loanDefaultDays        Int      @default(7)
+  overdueReminderDays    Int      @default(1)
+  inventoryNumberPattern String   @default("{SCHOOL}-{YEAR}-{SEQ:5}")
+  extra                  Json? // إعدادات إضافية قابلة للتوسعة
+  updatedAt              DateTime @updatedAt
+  school                 School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@map("school_settings")
+}
+
+// =====================================================================
+// 2. الهوية البصرية والترويسة
+// =====================================================================
+
+model BrandingSettings {
+  id                  String      @id @default(uuid()) @db.Uuid
+  schoolId            String      @unique @db.Uuid
+  logoFileId          String?     @db.Uuid
+  logoWidthMm         Decimal?    @db.Decimal(6, 2)
+  logoPosition        String? // right | center | left
+  defaultLetterheadId String?     @unique @db.Uuid
+  primaryColor        String      @default("#0B2545")
+  secondaryColor      String      @default("#1D5FA8")
+  footerText          String?
+  showPageNumbers     Boolean     @default(true)
+  updatedAt           DateTime    @updatedAt
+  updatedById         String?     @db.Uuid
+  school              School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  logoFile            StoredFile? @relation("BrandingLogo", fields: [logoFileId], references: [id], onDelete: SetNull)
+  defaultLetterhead   Letterhead? @relation("DefaultLetterhead", fields: [defaultLetterheadId], references: [id], onDelete: SetNull)
+
+  @@map("branding_settings")
+}
+
+model Letterhead {
+  id              String              @id @default(uuid()) @db.Uuid
+  schoolId        String              @db.Uuid
+  name            String
+  mode            LetterheadMode
+  imageFileId     String?             @db.Uuid
+  imageWidthMm    Decimal?            @db.Decimal(6, 2)
+  imageHeightMm   Decimal?            @db.Decimal(6, 2)
+  // نصوص الترويسة المُنشأة: المملكة المغربية، الوزارة، الأكاديمية، المديرية، المؤسسة...
+  textLines       Json?
+  showLogo        Boolean             @default(true)
+  showContact     Boolean             @default(false)
+  placement       LetterheadPlacement @default(ALL_PAGES)
+  heightMm        Decimal             @default(35) @db.Decimal(6, 2)
+  marginsMm       Json? // {top,right,bottom,left}
+  footer          Json? // {text, showPageNumbers}
+  version         Int                 @default(1)
+  isArchived      Boolean             @default(false)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  createdById     String?             @db.Uuid
+  school          School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  imageFile       StoredFile?         @relation("LetterheadImage", fields: [imageFileId], references: [id], onDelete: SetNull)
+  defaultFor      BrandingSettings?   @relation("DefaultLetterhead")
+  reportTemplates ReportTemplate[]
+
+  @@index([schoolId])
+  @@map("letterheads")
+}
+
+// =====================================================================
+// 3. المستخدمون والأدوار والصلاحيات (RBAC)
+// =====================================================================
+
+model User {
+  id                  String                   @id @default(uuid()) @db.Uuid
+  email               String?                  @unique
+  username            String                   @unique
+  passwordHash        String // Argon2id
+  fullNameAr          String
+  fullNameFr          String?
+  phone               String?
+  locale              Locale                   @default(ar)
+  status              UserStatus               @default(ACTIVE)
+  mustChangePassword  Boolean                  @default(true)
+  failedLoginCount    Int                      @default(0)
+  lockedUntil         DateTime?
+  lastLoginAt         DateTime?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  roles               UserRole[]
+  permissionOverrides UserPermissionOverride[]
+  sessions            AuthSession[]
+  staffProfile        StaffMember?
+  notifications       Notification[]
+  notificationPrefs   NotificationPreference[]
+  auditLogs           AuditLog[]
+
+  @@map("users")
+}
+
+model AuthSession {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @db.Uuid
+  refreshTokenHash String    @unique
+  userAgent        String?
+  ipAddress        String?
+  createdAt        DateTime  @default(now())
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("auth_sessions")
+}
+
+model Role {
+  id          String           @id @default(uuid()) @db.Uuid
+  code        String           @unique // ADMIN, DIRECTOR, ASSET_MANAGER...
+  nameAr      String
+  nameFr      String?
+  isSystem    Boolean          @default(false) // الأدوار الأساسية لا تُحذف
+  createdAt   DateTime         @default(now())
+  permissions RolePermission[]
+  userRoles   UserRole[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id            String                   @id @default(uuid()) @db.Uuid
+  // الصيغة: <module>.<action> مثل assets.create، stock.adjust، backup.restore
+  code          String                   @unique
+  module        String
+  action        String
+  descriptionAr String?
+  roles         RolePermission[]
+  overrides     UserPermissionOverride[]
+
+  @@index([module])
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String     @db.Uuid
+  permissionId String     @db.Uuid
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// الدور مرتبط بمؤسسة: هذا ما يحدد المؤسسات التي يراها المستخدم.
+model UserRole {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  roleId      String   @db.Uuid
+  schoolId    String   @db.Uuid
+  grantedAt   DateTime @default(now())
+  grantedById String?  @db.Uuid
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId, schoolId])
+  @@index([schoolId])
+  @@map("user_roles")
+}
+
+// تخصيص صلاحيات مستخدم بعينه (منح أو سحب) فوق صلاحيات دوره.
+model UserPermissionOverride {
+  id           String     @id @default(uuid()) @db.Uuid
+  userId       String     @db.Uuid
+  permissionId String     @db.Uuid
+  schoolId     String     @db.Uuid
+  granted      Boolean // true = منح، false = سحب
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permissionId, schoolId])
+  @@map("user_permission_overrides")
+}
+
+// =====================================================================
+// 4. القوائم القابلة للتعديل (Select/Multi-select)
+// =====================================================================
+
+// listKey أمثلة: ASSET_TYPE, SPACE_TYPE, UNIT_OF_MEASURE, FUNDING_SOURCE,
+// DAMAGE_TYPE, SUPPLIER_ACTIVITY, DOCUMENT_CATEGORY, RESOURCE_TYPE,
+// FACILITY_TYPE, ISSUING_BODY, CONDITION ...
+// schoolId = null ← قيمة عامة متاحة لكل المؤسسات.
+model LookupValue {
+  id        String  @id @default(uuid()) @db.Uuid
+  schoolId  String? @db.Uuid
+  listKey   String
+  code      String
+  labelAr   String
+  labelFr   String?
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+  school    School? @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, listKey, code])
+  @@index([listKey])
+  @@map("lookup_values")
+}
+
+model NumberSequence {
+  id       String @id @default(uuid()) @db.Uuid
+  schoolId String @db.Uuid
+  key      String // ASSET, LOAN, MAINT, PO, INV_SESSION, CUSTODY ...
+  year     Int
+  next     Int    @default(1)
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, key, year])
+  @@map("number_sequences")
+}
+
+// =====================================================================
+// 5. الملفات المخزنة (شعارات، صور، مرفقات)
+// =====================================================================
+
+model StoredFile {
+  id               String                @id @default(uuid()) @db.Uuid
+  schoolId         String                @db.Uuid
+  storageKey       String                @unique // مسار داخل التخزين، لا يُكشف للعميل
+  originalName     String
+  mimeType         String
+  sizeBytes        Int
+  sha256           String
+  uploadedById     String?               @db.Uuid
+  createdAt        DateTime              @default(now())
+  school           School                @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  brandingLogos    BrandingSettings[]    @relation("BrandingLogo")
+  letterheads      Letterhead[]          @relation("LetterheadImage")
+  documentVersions DocumentVersion[]
+  assetPhotos      Asset[]               @relation("AssetPhoto")
+  resourcePhotos   EducationalResource[] @relation("ResourcePhoto")
+  floorPlans       FloorPlan[]           @relation("FloorPlanBackground")
+  importJobs       ImportJob[]           @relation("ImportSource")
+
+  @@index([schoolId])
+  @@map("stored_files")
+}
+
+// =====================================================================
+// 6. البنايات والفضاءات والملاعب والمخازن
+// =====================================================================
+
+model Building {
+  id         String      @id @default(uuid()) @db.Uuid
+  schoolId   String      @db.Uuid
+  code       String
+  name       String
+  floors     Int?
+  builtYear  Int?
+  status     SpaceStatus @default(GOOD)
+  notes      String?
+  archivedAt DateTime?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  school     School      @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  rooms      Room[]
+
+  @@unique([schoolId, code])
+  @@map("buildings")
+}
+
+// "rooms" تشمل كل الفضاءات: حجرات، مكاتب، مكتبة، مرافق صحية، ساحات...
+model Room {
+  id                  String                    @id @default(uuid()) @db.Uuid
+  schoolId            String                    @db.Uuid
+  buildingId          String?                   @db.Uuid // الساحات والأسوار قد لا تتبع بناية
+  code                String
+  name                String
+  spaceTypeId         String                    @db.Uuid // LookupValue(SPACE_TYPE)
+  floor               String?
+  locationNote        String?
+  areaM2              Decimal?                  @db.Decimal(10, 2)
+  capacity            Int?
+  status              SpaceStatus               @default(GOOD)
+  lastInspectedAt     DateTime?
+  archivedAt          DateTime?
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  school              School                    @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  building            Building?                 @relation(fields: [buildingId], references: [id], onDelete: Restrict)
+  assets              Asset[]
+  resourceUnits       EducationalResourceUnit[]
+  facilities          Facility[]
+  warehouses          Warehouse[]
+  classes             SchoolClass[]
+  locationHistory     AssetLocation[]
+  maintenanceRequests MaintenanceRequest[]
+  inventoryScopes     InventorySessionScope[]
+  custodyFrom         CustodyRecord[]           @relation("CustodyFromRoom")
+  custodyTo           CustodyRecord[]           @relation("CustodyToRoom")
+  mapShapes           FloorPlanShape[]
+
+  @@unique([schoolId, code])
+  @@index([buildingId])
+  @@map("rooms")
+}
+
+// الملاعب والمرافق الرياضية
+model Facility {
+  id                  String               @id @default(uuid()) @db.Uuid
+  schoolId            String               @db.Uuid
+  roomId              String?              @db.Uuid // ربط اختياري بالفضاء (الساحة مثلاً)
+  code                String
+  name                String
+  facilityTypeId      String               @db.Uuid // LookupValue(FACILITY_TYPE)
+  surfaceCondition    String? // حالة الأرضية (LookupValue CONDITION code)
+  netsGoalsCondition  String? // حالة الشبكات والمرامي
+  status              SpaceStatus          @default(GOOD)
+  notes               String?
+  archivedAt          DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  school              School               @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  room                Room?                @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  assets              Asset[]
+  maintenanceRequests MaintenanceRequest[]
+  mapShapes           FloorPlanShape[]
+
+  @@unique([schoolId, code])
+  @@map("facilities")
+}
+
+model Warehouse {
+  id        String          @id @default(uuid()) @db.Uuid
+  schoolId  String          @db.Uuid
+  roomId    String?         @db.Uuid
+  code      String
+  name      String
+  isActive  Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  school    School          @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  room      Room?           @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  balances  StockBalance[]
+  movements StockMovement[]
+
+  @@unique([schoolId, code])
+  @@map("warehouses")
+}
+
+// =====================================================================
+// 7. الممتلكات والتجهيزات
+// =====================================================================
+
+model AssetCategory {
+  id         String                @id @default(uuid()) @db.Uuid
+  schoolId   String?               @db.Uuid // null = تصنيف عام
+  parentId   String?               @db.Uuid
+  code       String
+  nameAr     String
+  nameFr     String?
+  isActive   Boolean               @default(true)
+  school     School?               @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  parent     AssetCategory?        @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children   AssetCategory[]       @relation("CategoryTree")
+  assets     Asset[]
+  stockItems InventoryItem[]
+  resources  EducationalResource[]
+
+  @@unique([schoolId, code])
+  @@map("asset_categories")
+}
+
+model Asset {
+  id                  String                 @id @default(uuid()) @db.Uuid
+  schoolId            String                 @db.Uuid
+  inventoryNumber     String // رقم جرد فريد داخل المؤسسة
+  name                String
+  categoryId          String                 @db.Uuid
+  assetTypeId         String?                @db.Uuid // LookupValue(ASSET_TYPE)
+  description         String?
+  trackingMode        TrackingMode           @default(INDIVIDUAL)
+  quantity            Int                    @default(1)
+  serialNumber        String?
+  acquisitionDate     DateTime?              @db.Date
+  fundingSourceId     String?                @db.Uuid // LookupValue(FUNDING_SOURCE)
+  acquisitionValue    Decimal?               @db.Decimal(12, 2)
+  supplierId          String?                @db.Uuid
+  roomId              String?                @db.Uuid
+  facilityId          String?                @db.Uuid
+  responsibleStaffId  String?                @db.Uuid
+  status              AssetStatus            @default(AVAILABLE)
+  photoFileId         String?                @db.Uuid
+  qrToken             String                 @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid // محتوى رمز QR (لا يكشف بيانات)
+  purchaseOrderItemId String?                @db.Uuid // مصدره من الاقتناء
+  archivedAt          DateTime?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  createdById         String?                @db.Uuid
+  school              School                 @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  category            AssetCategory          @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  supplier            Supplier?              @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  room                Room?                  @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  facility            Facility?              @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  responsible         StaffMember?           @relation("AssetResponsible", fields: [responsibleStaffId], references: [id], onDelete: SetNull)
+  photoFile           StoredFile?            @relation("AssetPhoto", fields: [photoFileId], references: [id], onDelete: SetNull)
+  purchaseOrderItem   PurchaseOrderItem?     @relation(fields: [purchaseOrderItemId], references: [id], onDelete: SetNull)
+  locations           AssetLocation[]
+  maintenanceRequests MaintenanceRequest[]
+  inventoryItems      InventorySessionItem[]
+  custodyRecords      CustodyRecord[]
+
+  @@unique([schoolId, inventoryNumber])
+  @@index([schoolId, status])
+  @@index([schoolId, categoryId])
+  @@index([roomId])
+  @@map("assets")
+}
+
+// سجل مواقع الممتلك عبر الزمن
+model AssetLocation {
+  id              String    @id @default(uuid()) @db.Uuid
+  assetId         String    @db.Uuid
+  roomId          String    @db.Uuid
+  fromDate        DateTime  @default(now())
+  toDate          DateTime?
+  custodyRecordId String?   @db.Uuid
+  asset           Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  room            Room      @relation(fields: [roomId], references: [id], onDelete: Restrict)
+
+  @@index([assetId, fromDate])
+  @@map("asset_locations")
+}
+
+// =====================================================================
+// 8. المخزون — الرصيد يُشتق من الحركات فقط
+// =====================================================================
+
+model InventoryItem {
+  id                String                 @id @default(uuid()) @db.Uuid
+  schoolId          String                 @db.Uuid
+  code              String // رمز المادة
+  name              String
+  categoryId        String?                @db.Uuid
+  unitId            String                 @db.Uuid // LookupValue(UNIT_OF_MEASURE)
+  minQuantity       Decimal                @default(0) @db.Decimal(12, 3)
+  tracksExpiry      Boolean                @default(false)
+  defaultSupplierId String?                @db.Uuid
+  notes             String?
+  isActive          Boolean                @default(true)
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  school            School                 @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  category          AssetCategory?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  defaultSupplier   Supplier?              @relation(fields: [defaultSupplierId], references: [id], onDelete: SetNull)
+  balances          StockBalance[]
+  movements         StockMovement[]
+  inventoryLines    InventorySessionItem[]
+
+  @@unique([schoolId, code])
+  @@map("inventory_items")
+}
+
+// رصيد مُخزَّن مؤقتاً (cache) يُحدَّث داخل نفس المعاملة مع الحركة فقط.
+// CHECK (quantity >= 0) في constraints.sql. لا تعديل مباشر من الواجهة.
+model StockBalance {
+  itemId      String        @db.Uuid
+  warehouseId String        @db.Uuid
+  quantity    Decimal       @default(0) @db.Decimal(12, 3)
+  updatedAt   DateTime      @updatedAt
+  item        InventoryItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  warehouse   Warehouse     @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+
+  @@id([itemId, warehouseId])
+  @@map("stock_balances")
+}
+
+// حركات غير قابلة للتعديل أو الحذف؛ التصحيح بحركة REVERSAL.
+model StockMovement {
+  id               String            @id @default(uuid()) @db.Uuid
+  schoolId         String            @db.Uuid
+  number           String // رقم العملية
+  type             StockMovementType
+  itemId           String            @db.Uuid
+  warehouseId      String            @db.Uuid
+  quantity         Decimal           @db.Decimal(12, 3) // موجبة دائماً؛ الاتجاه من النوع
+  unitCost         Decimal?          @db.Decimal(12, 2)
+  expiryDate       DateTime?         @db.Date
+  supplierId       String?           @db.Uuid
+  recipientStaffId String?           @db.Uuid // المستفيد عند الصرف
+  transferGroupId  String?           @db.Uuid // يربط TRANSFER_OUT بـ TRANSFER_IN
+  reversesId       String?           @unique @db.Uuid
+  deliveryItemId   String?           @db.Uuid
+  reason           String?
+  occurredAt       DateTime          @default(now())
+  createdById      String            @db.Uuid
+  clientOpId       String?           @unique // منع التكرار عند المزامنة
+  createdAt        DateTime          @default(now())
+  school           School            @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  item             InventoryItem     @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  warehouse        Warehouse         @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  supplier         Supplier?         @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  recipient        StaffMember?      @relation(fields: [recipientStaffId], references: [id], onDelete: SetNull)
+  reverses         StockMovement?    @relation("Reversal", fields: [reversesId], references: [id], onDelete: Restrict)
+  reversedBy       StockMovement?    @relation("Reversal")
+  deliveryItem     DeliveryItem?     @relation(fields: [deliveryItemId], references: [id], onDelete: SetNull)
+
+  @@unique([schoolId, number])
+  @@index([itemId, warehouseId, occurredAt])
+  @@index([schoolId, occurredAt])
+  @@map("stock_movements")
+}
+
+// =====================================================================
+// 9. الموردون والطلبيات والاقتناء
+// =====================================================================
+
+model Supplier {
+  id             String          @id @default(uuid()) @db.Uuid
+  schoolId       String          @db.Uuid
+  name           String
+  activityId     String?         @db.Uuid // LookupValue(SUPPLIER_ACTIVITY)
+  phone          String?
+  email          String?
+  address        String?
+  ice            String? // المعرف الموحد للمقاولة إن وُجد
+  otherIds       Json? // RC، IF، ... اختيارية
+  notes          String?
+  archivedAt     DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  school         School          @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  assets         Asset[]
+  stockItems     InventoryItem[]
+  movements      StockMovement[]
+  purchaseOrders PurchaseOrder[]
+  invoices       Invoice[]
+
+  @@index([schoolId, name])
+  @@map("suppliers")
+}
+
+// مسار مصادقة مرن حسب مصدر التمويل / الجهة المسيرة
+model ApprovalWorkflow {
+  id              String                 @id @default(uuid()) @db.Uuid
+  schoolId        String                 @db.Uuid
+  name            String
+  fundingSourceId String?                @db.Uuid // null = افتراضي
+  managingBody    String? // الجهة المسيرة
+  isActive        Boolean                @default(true)
+  school          School                 @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  steps           ApprovalWorkflowStep[]
+  purchaseOrders  PurchaseOrder[]
+
+  @@map("approval_workflows")
+}
+
+model ApprovalWorkflowStep {
+  id               String                  @id @default(uuid()) @db.Uuid
+  workflowId       String                  @db.Uuid
+  stepOrder        Int
+  name             String
+  requiredRoleCode String? // أو مستخدم محدد
+  requiredUserId   String?                 @db.Uuid
+  workflow         ApprovalWorkflow        @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  approvals        PurchaseOrderApproval[]
+
+  @@unique([workflowId, stepOrder])
+  @@map("approval_workflow_steps")
+}
+
+model PurchaseOrder {
+  id              String                  @id @default(uuid()) @db.Uuid
+  schoolId        String                  @db.Uuid
+  number          String
+  title           String
+  needDescription String?
+  status          PurchaseOrderStatus     @default(NEED_RECORDED)
+  fundingSourceId String?                 @db.Uuid
+  budgetLine      String? // الاعتماد المالي
+  estimatedTotal  Decimal?                @db.Decimal(12, 2)
+  supplierId      String?                 @db.Uuid
+  workflowId      String?                 @db.Uuid
+  orderDocRef     String? // سند الطلب
+  orderedAt       DateTime?
+  createdById     String                  @db.Uuid
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  school          School                  @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  supplier        Supplier?               @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  workflow        ApprovalWorkflow?       @relation(fields: [workflowId], references: [id], onDelete: SetNull)
+  items           PurchaseOrderItem[]
+  approvals       PurchaseOrderApproval[]
+  deliveries      Delivery[]
+  invoices        Invoice[]
+
+  @@unique([schoolId, number])
+  @@index([schoolId, status])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id                String         @id @default(uuid()) @db.Uuid
+  purchaseOrderId   String         @db.Uuid
+  description       String
+  quantity          Decimal        @db.Decimal(12, 3)
+  unitId            String?        @db.Uuid
+  estimatedUnitCost Decimal?       @db.Decimal(12, 2)
+  targetKind        String // ASSET | STOCK | RESOURCE
+  inventoryItemId   String?        @db.Uuid // إن كانت مادة مخزون
+  purchaseOrder     PurchaseOrder  @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  deliveryItems     DeliveryItem[]
+  assets            Asset[]
+
+  @@map("purchase_order_items")
+}
+
+model PurchaseOrderApproval {
+  id              String               @id @default(uuid()) @db.Uuid
+  purchaseOrderId String               @db.Uuid
+  stepId          String               @db.Uuid
+  decision        ApprovalDecision     @default(PENDING)
+  decidedById     String?              @db.Uuid
+  decidedAt       DateTime?
+  comment         String?
+  purchaseOrder   PurchaseOrder        @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  step            ApprovalWorkflowStep @relation(fields: [stepId], references: [id], onDelete: Restrict)
+
+  @@unique([purchaseOrderId, stepId])
+  @@map("purchase_order_approvals")
+}
+
+model Delivery {
+  id              String            @id @default(uuid()) @db.Uuid
+  schoolId        String            @db.Uuid
+  purchaseOrderId String?           @db.Uuid
+  number          String
+  receivedAt      DateTime
+  receivedById    String            @db.Uuid
+  conformity      ConformityResult?
+  conformityNotes String?
+  school          School            @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  purchaseOrder   PurchaseOrder?    @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+  items           DeliveryItem[]
+
+  @@unique([schoolId, number])
+  @@map("deliveries")
+}
+
+model DeliveryItem {
+  id                  String             @id @default(uuid()) @db.Uuid
+  deliveryId          String             @db.Uuid
+  purchaseOrderItemId String?            @db.Uuid
+  description         String
+  quantityReceived    Decimal            @db.Decimal(12, 3)
+  quantityAccepted    Decimal            @db.Decimal(12, 3)
+  delivery            Delivery           @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  purchaseOrderItem   PurchaseOrderItem? @relation(fields: [purchaseOrderItemId], references: [id], onDelete: SetNull)
+  stockMovements      StockMovement[]
+
+  @@map("delivery_items")
+}
+
+model Invoice {
+  id                 String              @id @default(uuid()) @db.Uuid
+  schoolId           String              @db.Uuid
+  supplierId         String              @db.Uuid
+  purchaseOrderId    String?             @db.Uuid
+  invoiceNumber      String
+  invoiceDate        DateTime            @db.Date
+  amount             Decimal             @db.Decimal(12, 2)
+  createdAt          DateTime            @default(now())
+  school             School              @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  supplier           Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  purchaseOrder      PurchaseOrder?      @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+  maintenanceRecords MaintenanceRecord[]
+
+  @@unique([supplierId, invoiceNumber])
+  @@map("invoices")
+}
+
+// =====================================================================
+// 10. الموظفون/الأساتذة والأقسام
+// (يغطي جدول teachers المطلوب: teachers = staff_members حيث type = TEACHER)
+// =====================================================================
+
+model StaffMember {
+  id             String          @id @default(uuid()) @db.Uuid
+  schoolId       String          @db.Uuid
+  type           StaffType       @default(TEACHER)
+  staffNumber    String? // رقم التأجير أو معرف داخلي
+  fullNameAr     String
+  fullNameFr     String?
+  phone          String?
+  email          String?
+  userId         String?         @unique @db.Uuid // إن كان له حساب في النظام
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  school         School          @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  user           User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  classes        SchoolClass[]   @relation("ClassTeachers")
+  loans          ResourceLoan[]
+  responsibleFor Asset[]         @relation("AssetResponsible")
+  stockReceipts  StockMovement[]
+  custodyFrom    CustodyRecord[] @relation("CustodyFromStaff")
+  custodyTo      CustodyRecord[] @relation("CustodyToStaff")
+
+  @@unique([schoolId, staffNumber])
+  @@index([schoolId, type])
+  @@map("staff_members")
+}
+
+model SchoolClass {
+  id           String         @id @default(uuid()) @db.Uuid
+  schoolId     String         @db.Uuid
+  schoolYearId String         @db.Uuid
+  code         String
+  label        String // مثال: المستوى الرابع - أ
+  level        String?
+  roomId       String?        @db.Uuid
+  school       School         @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  schoolYear   SchoolYear     @relation(fields: [schoolYearId], references: [id], onDelete: Restrict)
+  room         Room?          @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  teachers     StaffMember[]  @relation("ClassTeachers")
+  loans        ResourceLoan[]
+
+  @@unique([schoolYearId, code])
+  @@map("classes")
+}
+
+// =====================================================================
+// 11. الوسائل التعليمية والإعارة
+// =====================================================================
+
+model EducationalResource {
+  id              String                    @id @default(uuid()) @db.Uuid
+  schoolId        String                    @db.Uuid
+  code            String // رقم الجرد للصنف
+  name            String
+  resourceTypeId  String?                   @db.Uuid // LookupValue(RESOURCE_TYPE)
+  categoryId      String?                   @db.Uuid
+  trackingMode    TrackingMode
+  // للأصناف الكمية فقط:
+  quantityTotal   Int                       @default(0)
+  quantityDamaged Int                       @default(0)
+  roomId          String?                   @db.Uuid
+  photoFileId     String?                   @db.Uuid
+  acquisitionDate DateTime?                 @db.Date
+  isLendable      Boolean                   @default(true)
+  archivedAt      DateTime?
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+  school          School                    @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  category        AssetCategory?            @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  photoFile       StoredFile?               @relation("ResourcePhoto", fields: [photoFileId], references: [id], onDelete: SetNull)
+  units           EducationalResourceUnit[]
+  loans           ResourceLoan[]
+  inventoryLines  InventorySessionItem[]
+
+  @@unique([schoolId, code])
+  @@map("educational_resources")
+}
+
+model EducationalResourceUnit {
+  id                  String                 @id @default(uuid()) @db.Uuid
+  resourceId          String                 @db.Uuid
+  inventoryNumber     String
+  serialNumber        String?
+  status              ResourceUnitStatus     @default(AVAILABLE)
+  roomId              String?                @db.Uuid
+  qrToken             String                 @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  resource            EducationalResource    @relation(fields: [resourceId], references: [id], onDelete: Restrict)
+  room                Room?                  @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  loans               ResourceLoan[]
+  maintenanceRequests MaintenanceRequest[]
+  inventoryLines      InventorySessionItem[]
+
+  @@unique([resourceId, inventoryNumber])
+  @@map("educational_resource_units")
+}
+
+// إعارة واحدة = وحدة فردية واحدة أو كمية من صنف كمي.
+// فهرس جزئي فريد على unitId للإعارات النشطة في constraints.sql.
+model ResourceLoan {
+  id                String                   @id @default(uuid()) @db.Uuid
+  schoolId          String                   @db.Uuid
+  number            String
+  resourceId        String                   @db.Uuid
+  unitId            String?                  @db.Uuid
+  quantity          Int                      @default(1)
+  borrowerStaffId   String                   @db.Uuid
+  classId           String?                  @db.Uuid
+  loanedAt          DateTime                 @default(now())
+  dueAt             DateTime
+  conditionOut      String? // LookupValue(CONDITION) code
+  status            LoanStatus               @default(ACTIVE)
+  notes             String?
+  borrowerSignature Json? // صورة/بيانات التوقيع الإلكتروني إن وجدت
+  handedOverById    String                   @db.Uuid // مسؤول التسليم
+  overdueNotifiedAt DateTime?
+  clientOpId        String?                  @unique
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  school            School                   @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  resource          EducationalResource      @relation(fields: [resourceId], references: [id], onDelete: Restrict)
+  unit              EducationalResourceUnit? @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  borrower          StaffMember              @relation(fields: [borrowerStaffId], references: [id], onDelete: Restrict)
+  class             SchoolClass?             @relation(fields: [classId], references: [id], onDelete: SetNull)
+  returns           ResourceReturn[]
+
+  @@unique([schoolId, number])
+  @@index([schoolId, status, dueAt])
+  @@index([borrowerStaffId])
+  @@map("resource_loans")
+}
+
+model ResourceReturn {
+  id           String       @id @default(uuid()) @db.Uuid
+  loanId       String       @db.Uuid
+  quantity     Int          @default(1)
+  returnedAt   DateTime     @default(now())
+  conditionIn  String? // LookupValue(CONDITION) code
+  damaged      Boolean      @default(false)
+  notes        String?
+  receivedById String       @db.Uuid
+  clientOpId   String?      @unique
+  loan         ResourceLoan @relation(fields: [loanId], references: [id], onDelete: Restrict)
+
+  @@index([loanId])
+  @@map("resource_returns")
+}
+
+// =====================================================================
+// 12. الصيانة
+// =====================================================================
+
+model MaintenanceRequest {
+  id             String                   @id @default(uuid()) @db.Uuid
+  schoolId       String                   @db.Uuid
+  number         String
+  // الهدف: واحد فقط من الأربعة (CHECK في constraints.sql)
+  assetId        String?                  @db.Uuid
+  roomId         String?                  @db.Uuid
+  facilityId     String?                  @db.Uuid
+  resourceUnitId String?                  @db.Uuid
+  type           MaintenanceType
+  damageTypeId   String?                  @db.Uuid // LookupValue(DAMAGE_TYPE)
+  description    String
+  reportedAt     DateTime                 @default(now())
+  reportedById   String                   @db.Uuid
+  urgency        Urgency                  @default(NORMAL)
+  assigneeId     String?                  @db.Uuid // المسؤول (مستخدم)
+  status         MaintenanceStatus        @default(NEW)
+  scheduleId     String?                  @db.Uuid
+  closedAt       DateTime?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  school         School                   @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  asset          Asset?                   @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  room           Room?                    @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  facility       Facility?                @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  resourceUnit   EducationalResourceUnit? @relation(fields: [resourceUnitId], references: [id], onDelete: Restrict)
+  schedule       MaintenanceSchedule?     @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  records        MaintenanceRecord[]
+
+  @@unique([schoolId, number])
+  @@index([schoolId, status, urgency])
+  @@map("maintenance_requests")
+}
+
+// تدخل على طلب صيانة
+model MaintenanceRecord {
+  id                 String             @id @default(uuid()) @db.Uuid
+  requestId          String             @db.Uuid
+  contractor         String? // الجهة المتدخلة
+  supplierInvoiceId  String?            @db.Uuid
+  cost               Decimal?           @db.Decimal(12, 2)
+  interventionReport String? // محضر التدخل
+  startedAt          DateTime?
+  repairedAt         DateTime?
+  outcome            MaintenanceStatus
+  createdById        String             @db.Uuid
+  createdAt          DateTime           @default(now())
+  request            MaintenanceRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  invoice            Invoice?           @relation(fields: [supplierInvoiceId], references: [id], onDelete: SetNull)
+
+  @@index([requestId])
+  @@map("maintenance_records")
+}
+
+// الصيانة الوقائية المجدولة
+model MaintenanceSchedule {
+  id               String               @id @default(uuid()) @db.Uuid
+  schoolId         String               @db.Uuid
+  title            String
+  targetType       String // ASSET | ROOM | FACILITY | RESOURCE_UNIT
+  targetId         String               @db.Uuid
+  intervalDays     Int
+  nextDueAt        DateTime
+  remindDaysBefore Int                  @default(7)
+  isActive         Boolean              @default(true)
+  school           School               @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  requests         MaintenanceRequest[]
+
+  @@index([schoolId, nextDueAt])
+  @@map("maintenance_schedules")
+}
+
+// =====================================================================
+// 13. الجرد المادي
+// =====================================================================
+
+model InventorySession {
+  id            String                     @id @default(uuid()) @db.Uuid
+  schoolId      String                     @db.Uuid
+  number        String
+  type          InventorySessionType
+  status        InventorySessionStatus     @default(DRAFT)
+  startDate     DateTime                   @db.Date
+  endDate       DateTime                   @db.Date
+  includesStock Boolean                    @default(false)
+  reportNotes   String? // محضر
+  validatedById String?                    @db.Uuid
+  validatedAt   DateTime?
+  closedAt      DateTime?
+  createdById   String                     @db.Uuid
+  createdAt     DateTime                   @default(now())
+  school        School                     @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  scopes        InventorySessionScope[]
+  assignees     InventorySessionAssignee[]
+  items         InventorySessionItem[]
+
+  @@unique([schoolId, number])
+  @@map("inventory_sessions")
+}
+
+model InventorySessionScope {
+  sessionId String           @db.Uuid
+  roomId    String           @db.Uuid
+  session   InventorySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  room      Room             @relation(fields: [roomId], references: [id], onDelete: Restrict)
+
+  @@id([sessionId, roomId])
+  @@map("inventory_session_scopes")
+}
+
+model InventorySessionAssignee {
+  sessionId String           @db.Uuid
+  userId    String           @db.Uuid
+  session   InventorySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@id([sessionId, userId])
+  @@map("inventory_session_assignees")
+}
+
+// سطر جرد: النظري (لقطة عند الفتح) مقابل الفعلي
+model InventorySessionItem {
+  id             String                   @id @default(uuid()) @db.Uuid
+  sessionId      String                   @db.Uuid
+  kind           InventoryItemKind
+  assetId        String?                  @db.Uuid
+  resourceId     String?                  @db.Uuid
+  resourceUnitId String?                  @db.Uuid
+  stockItemId    String?                  @db.Uuid
+  expectedRoomId String?                  @db.Uuid
+  foundRoomId    String?                  @db.Uuid
+  expectedQty    Decimal                  @db.Decimal(12, 3)
+  countedQty     Decimal?                 @db.Decimal(12, 3)
+  conditionFound String?
+  isUnexpected   Boolean                  @default(false) // موجود فعلياً وغير مسجل نظرياً
+  notes          String?
+  countedById    String?                  @db.Uuid
+  countedAt      DateTime?
+  clientOpId     String?                  @unique
+  session        InventorySession         @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  asset          Asset?                   @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  resource       EducationalResource?     @relation(fields: [resourceId], references: [id], onDelete: Restrict)
+  resourceUnit   EducationalResourceUnit? @relation(fields: [resourceUnitId], references: [id], onDelete: Restrict)
+  stockItem      InventoryItem?           @relation(fields: [stockItemId], references: [id], onDelete: Restrict)
+
+  @@index([sessionId])
+  @@map("inventory_session_items")
+}
+
+// =====================================================================
+// 14. العهدة والتسليم والتحويل
+// =====================================================================
+
+model CustodyRecord {
+  id          String        @id @default(uuid()) @db.Uuid
+  schoolId    String        @db.Uuid
+  number      String
+  action      CustodyAction
+  assetId     String        @db.Uuid
+  fromStaffId String?       @db.Uuid
+  toStaffId   String?       @db.Uuid
+  fromRoomId  String?       @db.Uuid
+  toRoomId    String?       @db.Uuid
+  occurredAt  DateTime      @default(now())
+  signatures  Json? // توقيعات الأطراف
+  notes       String?
+  createdById String        @db.Uuid
+  createdAt   DateTime      @default(now())
+  school      School        @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  asset       Asset         @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  fromStaff   StaffMember?  @relation("CustodyFromStaff", fields: [fromStaffId], references: [id], onDelete: Restrict)
+  toStaff     StaffMember?  @relation("CustodyToStaff", fields: [toStaffId], references: [id], onDelete: Restrict)
+  fromRoom    Room?         @relation("CustodyFromRoom", fields: [fromRoomId], references: [id], onDelete: Restrict)
+  toRoom      Room?         @relation("CustodyToRoom", fields: [toRoomId], references: [id], onDelete: Restrict)
+
+  @@unique([schoolId, number])
+  @@index([assetId, occurredAt])
+  @@map("custody_records")
+}
+
+// =====================================================================
+// 15. الوثائق والأرشيف
+// =====================================================================
+
+model Document {
+  id           String            @id @default(uuid()) @db.Uuid
+  schoolId     String            @db.Uuid
+  title        String
+  categoryId   String?           @db.Uuid // LookupValue(DOCUMENT_CATEGORY)
+  documentDate DateTime?         @db.Date
+  issuingBody  String?
+  expiresAt    DateTime?         @db.Date
+  notes        String?
+  accessLevel  String            @default("SCHOOL") // SCHOOL | RESTRICTED (بالصلاحية)
+  archivedAt   DateTime?
+  createdById  String            @db.Uuid
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  school       School            @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  versions     DocumentVersion[]
+  links        DocumentLink[]
+
+  @@index([schoolId, categoryId])
+  @@map("documents")
+}
+
+model DocumentVersion {
+  id           String     @id @default(uuid()) @db.Uuid
+  documentId   String     @db.Uuid
+  version      Int
+  fileId       String     @db.Uuid
+  changeNote   String?
+  uploadedById String     @db.Uuid
+  createdAt    DateTime   @default(now())
+  document     Document   @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  file         StoredFile @relation(fields: [fileId], references: [id], onDelete: Restrict)
+
+  @@unique([documentId, version])
+  @@map("document_versions")
+}
+
+// ربط الوثيقة بأي كيان (ممتلك، طلبية، صيانة، جرد، مورد، فضاء...)
+model DocumentLink {
+  documentId String   @db.Uuid
+  entityType String // ASSET | PURCHASE_ORDER | MAINTENANCE_REQUEST | INVENTORY_SESSION | SUPPLIER | ROOM | FACILITY | RESOURCE | CUSTODY | LOAN
+  entityId   String   @db.Uuid
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@id([documentId, entityType, entityId])
+  @@index([entityType, entityId])
+  @@map("document_links")
+}
+
+// =====================================================================
+// 16. الإشعارات
+// =====================================================================
+
+model Notification {
+  id         String           @id @default(uuid()) @db.Uuid
+  schoolId   String           @db.Uuid
+  userId     String           @db.Uuid
+  type       NotificationType
+  title      String
+  body       String?
+  entityType String?
+  entityId   String?          @db.Uuid
+  dedupeKey  String? // يمنع تكرار نفس التنبيه
+  readAt     DateTime?
+  createdAt  DateTime         @default(now())
+  school     School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dedupeKey])
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  userId  String              @db.Uuid
+  type    NotificationType
+  channel NotificationChannel
+  enabled Boolean             @default(true)
+  user    User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, type, channel])
+  @@map("notification_preferences")
+}
+
+// =====================================================================
+// 17. سجل التدقيق (إلحاق فقط — منع UPDATE/DELETE بمشغّل في constraints.sql)
+// =====================================================================
+
+model AuditLog {
+  id         BigInt   @id @default(autoincrement())
+  schoolId   String?  @db.Uuid
+  userId     String?  @db.Uuid
+  action     String // CREATE | UPDATE | DELETE | ARCHIVE | APPROVE | LOGIN | EXPORT | IMPORT | RESTORE ...
+  entityType String
+  entityId   String?
+  before     Json?
+  after      Json?
+  ipAddress  String?
+  userAgent  String?
+  requestId  String?
+  createdAt  DateTime @default(now())
+  school     School?  @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([schoolId, createdAt])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
+
+// =====================================================================
+// 18. المزامنة دون اتصال
+// =====================================================================
+
+model OfflineSyncOperation {
+  id              String     @id @default(uuid()) @db.Uuid
+  schoolId        String     @db.Uuid
+  userId          String     @db.Uuid
+  deviceId        String
+  clientOpId      String     @unique // معرف العملية من العميل (idempotency)
+  operation       String // مثال: stock.out، loan.create، inventory.count
+  payload         Json
+  baseVersion     String? // لكشف التعارض
+  status          SyncStatus @default(RECEIVED)
+  resultRef       String?
+  error           String?
+  clientCreatedAt DateTime
+  receivedAt      DateTime   @default(now())
+  appliedAt       DateTime?
+  school          School     @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+
+  @@index([schoolId, status])
+  @@map("offline_sync_operations")
+}
+
+// =====================================================================
+// 19. النسخ الاحتياطي، الاستيراد، التقارير، المخطط التفاعلي
+// =====================================================================
+
+model BackupRecord {
+  id            String       @id @default(uuid()) @db.Uuid
+  schoolId      String?      @db.Uuid // null = نسخة كاملة للنظام
+  kind          BackupKind
+  status        BackupStatus
+  storagePath   String?
+  sizeBytes     BigInt?
+  sha256        String?
+  scheduled     Boolean      @default(false)
+  startedAt     DateTime     @default(now())
+  finishedAt    DateTime?
+  verifiedAt    DateTime?
+  restoredAt    DateTime?
+  triggeredById String?      @db.Uuid
+  error         String?
+  school        School?      @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+
+  @@index([startedAt])
+  @@map("backup_records")
+}
+
+model ImportJob {
+  id            String       @id @default(uuid()) @db.Uuid
+  schoolId      String       @db.Uuid
+  entity        String // ASSETS | STOCK | ROOMS | BUILDINGS | FACILITIES | RESOURCES | STAFF | LOANS | SUPPLIERS | INVENTORY | SCHOOLS
+  sourceFileId  String       @db.Uuid
+  columnMapping Json?
+  status        ImportStatus @default(UPLOADED)
+  totalRows     Int?
+  acceptedRows  Int?
+  rejectedRows  Int?
+  errorReport   Json?
+  createdById   String       @db.Uuid
+  committedAt   DateTime?
+  createdAt     DateTime     @default(now())
+  school        School       @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  sourceFile    StoredFile   @relation("ImportSource", fields: [sourceFileId], references: [id], onDelete: Restrict)
+
+  @@index([schoolId, createdAt])
+  @@map("import_jobs")
+}
+
+model ReportTemplate {
+  id           String      @id @default(uuid()) @db.Uuid
+  schoolId     String      @db.Uuid
+  ownerId      String?     @db.Uuid // null = مشترك
+  reportKey    String // ASSETS | STOCK | STOCK_MOVEMENTS | LOANS_OVERDUE | ANNUAL ...
+  name         String
+  filters      Json
+  columns      Json?
+  letterheadId String?     @db.Uuid // ترويسة مختلفة لهذا التقرير
+  createdAt    DateTime    @default(now())
+  school       School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  letterhead   Letterhead? @relation(fields: [letterheadId], references: [id], onDelete: SetNull)
+
+  @@map("report_templates")
+}
+
+model FloorPlan {
+  id               String           @id @default(uuid()) @db.Uuid
+  schoolId         String           @db.Uuid
+  name             String
+  backgroundFileId String?          @db.Uuid // صورة جوية أو مخطط
+  widthPx          Int?
+  heightPx         Int?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  school           School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  background       StoredFile?      @relation("FloorPlanBackground", fields: [backgroundFileId], references: [id], onDelete: SetNull)
+  shapes           FloorPlanShape[]
+
+  @@map("floor_plans")
+}
+
+model FloorPlanShape {
+  id          String       @id @default(uuid()) @db.Uuid
+  floorPlanId String       @db.Uuid
+  kind        MapShapeKind
+  geometry    Json // نقاط بالإحداثيات النسبية للمخطط
+  label       String?
+  roomId      String?      @db.Uuid
+  facilityId  String?      @db.Uuid
+  floorPlan   FloorPlan    @relation(fields: [floorPlanId], references: [id], onDelete: Cascade)
+  room        Room?        @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  facility    Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+
+  @@index([floorPlanId])
+  @@map("floor_plan_shapes")
+}

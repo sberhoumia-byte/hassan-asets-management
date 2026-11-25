@@ -1,0 +1,16 @@
+{
+  "name": "@hassan/database",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "validate": "prisma validate",
+    "format": "prisma format",
+    "generate": "prisma generate",
+    "migrate:dev": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "seed:test": "echo \"[المرحلة 3] بيانات الاختبار لم تُنشأ بعد\" && exit 1"
+  },
+  "devDependencies": {
+    "prisma": "7.10.1"
+  }
+}
