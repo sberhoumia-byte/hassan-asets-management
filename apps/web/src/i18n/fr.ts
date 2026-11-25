@@ -1,3 +1,5 @@
+import { frPhase4 } from "./phase4.fr";
+
 export const fr: Record<string, string> = {
   "app.shortName": "Gestion matérielle",
   "app.fullName": "Système de gestion matérielle de l'école Hassan Ibn Thabit – Aourir",
@@ -364,4 +366,5 @@ export const fr: Record<string, string> = {
   "setup.token": "Code d'installation",
   "setup.tokenHint": "Valeur SETUP_TOKEN définie sur le serveur",
   "setup.badToken": "Code d'installation incorrect",
+  ...frPhase4,
 };

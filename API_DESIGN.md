@@ -65,7 +65,7 @@
 
 الرمز 🔒 = يتطلب صلاحية خاصة. كل المسارات تحت `/api/v1`.
 
-> ✅ = منفذ ومختبر في المرحلة 3 (الخادم الحقيقي). الباقي تصميم للمراحل اللاحقة.
+> ✅ = منفذ ومختبر على الخادم الحقيقي (المرحلتان 3 و4). الباقي تصميم للمراحل اللاحقة.
 > المؤسسة النشطة تُحدد من المسار `/schools/:schoolId/...` أو من الترويسة `X-School-Id` للمسارات العامة مثل `/users`.
 > التوثيق التفاعلي (Swagger) متاح في التطوير على `/api/docs`.
 
@@ -119,38 +119,47 @@
 
 قواعد منع التصعيد: دور `ADMIN` لا يمنحه أو يسحبه إلا مدير نظام؛ لا يُمنح فردياً ما لا يملكه المانح؛ غير مدير النظام لا يعدّل حساب مدير نظام؛ يبقى مدير نظام نشط واحد على الأقل (`LAST_ADMIN`).
 
-### 3.5 القوائم القابلة للتعديل
-`GET /schools/:schoolId/lookups?listKey=` ✅ (🔒 `lookups.view`: القيم العامة + قيم المؤسسة). الإضافة والتعديل 🔒 `lookups.manage`: مع شاشات المرحلة 4.
+### 3.5 القوائم والتصنيفات وصيغة الترقيم ✅
+كل المسارات تحت `/schools/:schoolId`. القراءة لأي عضو في المؤسسة؛ الكتابة 🔒 `lookups.manage` (وصيغة الترقيم 🔒 `settings.manage`).
+| الطريقة | المسار | الوصف |
+|---|---|---|
+| GET | `/lookups?listKey=&all=1` | القيم العامة + قيم المؤسسة (`all=1` يشمل المعطلة) |
+| POST | `/lookups/:listKey` | قيمة خاصة بالمؤسسة؛ رمز مكرر → `409 DUPLICATE_CODE` |
+| PUT | `/lookups/value/:id` | القيم العامة لا تُعدَّل من مؤسسة (404) |
+| GET/POST/PUT | `/categories[/:id]` | شجرة؛ أب غير موجود `422 CATEGORY_NOT_FOUND`، حلقة `422 CATEGORY_CYCLE` |
+| GET/PUT | `/settings/numbering` | `{inventoryNumberPattern}` يجب أن يتضمن `{SEQ}` أو `{SEQ:n}` |
 
 ### 3.19-أ لوحة القيادة ✅
 `GET /schools/:schoolId/dashboard/{stats,alerts,activity}` 🔒 `dashboard.view` — أرقام محسوبة من القاعدة، وآخر العمليات من سجل التدقيق. `GET /notifications` إشعارات المستخدم. `GET /health` فحص الخادم والقاعدة.
 
-### 3.6 الممتلكات
+### 3.6 الممتلكات ✅
+المسارات تحت `/schools/:schoolId`.
 | الطريقة | المسار | الوصف |
 |---|---|---|
-| GET | `/assets` | فلترة: تصنيف، حالة، فضاء، مصدر، فترة، مسؤول |
-| POST | `/assets` | رقم الجرد يُولَّد تلقائياً أو يُدخل؛ التكرار → `409` |
-| GET/PATCH | `/assets/:id` | |
-| POST | `/assets/:id/archive` | الاستبعاد |
-| GET | `/assets/:id/history` | التدقيق + المواقع + العهدة + الصيانة |
-| GET | `/assets/:id/qr.png` | رمز QR (يحمل `qrToken` فقط) |
-| GET | `/scan/:qrToken` | حل الرمز إلى الكيان (ممتلك أو وحدة وسيلة) |
-| GET/POST/PATCH | `/asset-categories` | شجرة التصنيفات |
+| GET | `/assets?q=&categoryId=&status=&archived=1&page=&pageSize=` | 🔒 `assets.view` → `{items,total,page,pageSize}` |
+| POST | `/assets` | 🔒 `assets.create`؛ رقم الجرد فارغ = يُولَّد حسب الصيغة؛ التكرار → `409 DUPLICATE_INVENTORY_NUMBER` (حتى مع طلبين متزامنين) |
+| GET/PUT | `/assets/:id` | 🔒 `assets.view`/`assets.update`؛ `photoDataUrl`: غائب = بلا تغيير، `null` = حذف؛ مستبعد → `422 ASSET_ARCHIVED` |
+| POST | `/assets/:id/archive` | 🔒 `assets.archive` `{reason}` — الحالة DISPOSED، لا حذف |
+| GET | `/assets/:id/history` | التدقيق مع الحقول المتغيرة (القديم والجديد) |
+| GET | `/scan/:qrToken` (بلا مؤسسة) | يعيد `{kind, id, schoolId}` لمن يصل إلى المؤسسة فقط، وإلا 404 |
 
-### 3.7 المخزون
+رمز QR يُولَّد في الواجهة ويحمل رابط `#/scan/<qrToken>` فقط (رمز عشوائي لا يكشف بيانات). المواقع والعهدة والصيانة في السجل: المراحل 5 و6.
+
+### 3.7 المخزون ✅
+المسارات تحت `/schools/:schoolId`. القراءة 🔒 `stock.view`، الحركات 🔒 `stock.create`. كل حركة تقبل `clientOpId` (إعادة الإرسال تعيد `{replayed:true}` دون حركة ثانية) وتعيد أرقام الحركات `MV-{YEAR}-{SEQ:5}`.
 | الطريقة | المسار | الوصف |
 |---|---|---|
-| GET/POST/PATCH | `/stock/items[/:id]` | المواد |
-| GET | `/stock/items/:id/balances` | الرصيد حسب المخزن |
-| GET | `/stock/movements` | فلترة بالمادة/المخزن/النوع/الفترة |
-| POST | `/stock/movements/in` | `{itemId, warehouseId, quantity, unitCost?, supplierId?, expiryDate?}` |
-| POST | `/stock/movements/out` | صرف؛ رصيد غير كاف → `422 STOCK_INSUFFICIENT` |
-| POST | `/stock/movements/transfer` | ينشئ حركتين مرتبطتين ذرياً |
-| POST | `/stock/movements/return` | |
-| POST | `/stock/movements/adjust` | 🔒 `stock.adjust` + سبب إلزامي |
-| POST | `/stock/movements/:id/reverse` | 🔒 `stock.reverse` |
-| GET | `/stock/alerts` | منخفض / نافد / قارب الانتهاء |
-| GET/POST | `/warehouses` | |
+| GET/POST/PUT | `/warehouses[/:id]` | مخزن معطل → `422 WAREHOUSE_INACTIVE` عند الحركة |
+| GET | `/stock/items?q=&alert=low\|out&all=1` | المواد مع `total` و`balances` لكل مخزن و`level` |
+| POST/PUT | `/stock/items[/:id]` | تغيير الوحدة بعد وجود حركات → `422 UNIT_LOCKED` |
+| GET | `/stock/movements?itemId=&warehouseId=&type=&from=&to=&page=` | |
+| POST | `/stock/movements/in` | `{itemId, warehouseId, quantity, unitCost?, supplierId?, expiryDate?, reason?, occurredAt?}` |
+| POST | `/stock/movements/out` | `reason` (المستفيد/الغرض) إلزامي؛ رصيد غير كاف → `422 STOCK_INSUFFICIENT {available, requested}` |
+| POST | `/stock/movements/return` | سبب إلزامي |
+| POST | `/stock/movements/transfer` | حركتان مرتبطتان (`transferGroupId`) في معاملة واحدة؛ نفس المخزن مرفوض |
+| POST | `/stock/movements/adjust` | 🔒 `stock.adjust` `{countedQuantity, reason}` — الفرق حركة؛ لا فرق → `422 NO_DIFFERENCE` |
+| POST | `/stock/movements/:id/reverse` | 🔒 `stock.reverse` `{reason}` — مرة واحدة (`ALREADY_REVERSED`)، يعكس طرفي التحويل معاً |
+| GET | `/stock/alerts` | `{out, low, expiring}` (الصلاحية خلال 30 يوماً) |
 
 **تسلسل الصرف داخل الخادم (معاملة واحدة):**
 1. `SELECT quantity FROM stock_balances WHERE itemId=$1 AND warehouseId=$2 FOR UPDATE`
@@ -187,8 +196,8 @@
 ### 3.13 العهدة
 `GET /custody?assetId=&staffId=`، `POST /custody` `{action, assetId, toStaffId?, toRoomId?, signatures?}` (يحدّث موقع/مسؤول الممتلك ذرياً)، `GET /custody/:id/report.pdf` (محضر التسليم).
 
-### 3.14 الموردون
-`/suppliers` CRUD + `GET /suppliers/:id/orders` + `GET /suppliers/:id/invoices`.
+### 3.14 الموردون ✅ (الطلبيات والفواتير: المرحلة 6)
+`GET /schools/:schoolId/suppliers?q=&archived=1` 🔒 `suppliers.view` (مع عدد الاستعمالات)، `POST`/`PUT` 🔒 `suppliers.create`/`update` (ICE مكرر → `409 DUPLICATE_ICE`)، `POST /:id/archive` و`/:id/restore` 🔒 `suppliers.archive` — لا حذف. `GET /suppliers/:id/orders` و`/invoices`: المرحلة 6.
 
 ### 3.15 المخطط التفاعلي
 `/floor-plans` CRUD، `POST /floor-plans/:id/background` (صورة أو PDF)، `PUT /floor-plans/:id/shapes` (حفظ الأشكال وربطها)، `GET /floor-plans/:id/status` (ألوان حسب الحالة والأعطاب).

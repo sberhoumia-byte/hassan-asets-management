@@ -24,7 +24,7 @@ export function Sidebar() {
         const Icon = item.icon;
         if (item.serverOnly && api.mode === "review") {
           return (
-            <Tooltip key={item.key} label={t("users.serverOnly")} position="left" withArrow>
+            <Tooltip key={item.key} label={t("common.serverOnly")} position="left" withArrow>
               <div className="side-link" aria-disabled="true" role="link" data-testid={`nav-${item.key}`}>
                 <Icon size={20} stroke={1.6} />
                 <span className="lbl">{t(`nav.${item.key}`)}</span>

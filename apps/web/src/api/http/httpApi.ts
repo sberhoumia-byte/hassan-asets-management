@@ -24,6 +24,8 @@ import {
   type SessionUser,
   type UsersApi,
 } from "../types";
+import type { AssetsApi, CatalogApi, StockApi, SuppliersApi } from "../phase4";
+import { HttpAssetsApi, HttpCatalogApi, HttpStockApi, HttpSuppliersApi } from "./phase4Http";
 
 type Method = "GET" | "POST" | "PUT" | "DELETE";
 interface Opts {
@@ -41,9 +43,17 @@ export class HttpApi implements Api {
   private accessToken: string | null = null;
   private refreshing: Promise<SessionUser | null> | null = null;
   readonly users: UsersApi;
+  readonly catalog: CatalogApi;
+  readonly assets: AssetsApi;
+  readonly stock: StockApi;
+  readonly suppliers: SuppliersApi;
 
   constructor(private base = "/api/v1") {
     this.users = new HttpUsersApi(this);
+    this.catalog = new HttpCatalogApi(this);
+    this.assets = new HttpAssetsApi(this);
+    this.stock = new HttpStockApi(this);
+    this.suppliers = new HttpSuppliersApi(this);
   }
 
   async request<T>(method: Method, path: string, o: Opts = {}): Promise<T> {

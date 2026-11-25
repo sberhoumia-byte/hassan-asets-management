@@ -9,3 +9,4 @@ import type { Api } from "./types";
 export const api: Api =
   import.meta.env.MODE === "review" ? new ReviewApi() : new HttpApi(import.meta.env.VITE_API_URL ?? "/api/v1");
 export * from "./types";
+export * from "./phase4";

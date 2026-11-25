@@ -19,6 +19,11 @@ import { PrintPreviewPage } from "./pages/settings/PrintPreviewPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { UsersPage } from "./pages/UsersPage";
 import { ForcePasswordPage } from "./pages/ForcePasswordPage";
+import { AssetsPage } from "./pages/assets/AssetsPage";
+import { StockPage } from "./pages/stock/StockPage";
+import { SuppliersPage } from "./pages/SuppliersPage";
+import { ScanPage } from "./pages/ScanPage";
+import { CatalogPage } from "./pages/settings/CatalogPage";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
@@ -69,12 +74,18 @@ export function App() {
                     <Route element={<Gate area="app"><AppLayout /></Gate>}>
                       <Route index element={<DashboardPage />} />
                       <Route path="users" element={<UsersPage />} />
+                      <Route path="assets" element={<AssetsPage />} />
+                      <Route path="assets/:id" element={<AssetsPage />} />
+                      <Route path="stock" element={<StockPage />} />
+                      <Route path="suppliers" element={<SuppliersPage />} />
+                      <Route path="scan/:token" element={<ScanPage />} />
                       <Route path="settings" element={<SettingsLayout />}>
                         <Route index element={<Navigate to="school" replace />} />
                         <Route path="school" element={<SchoolInfoPage />} />
                         <Route path="hierarchy" element={<HierarchyPage />} />
                         <Route path="branding" element={<BrandingPage />} />
                         <Route path="print-preview" element={<PrintPreviewPage />} />
+                        <Route path="catalog" element={<CatalogPage />} />
                       </Route>
                       <Route path="*" element={<NotFoundPage />} />
                     </Route>

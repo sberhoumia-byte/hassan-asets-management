@@ -32,8 +32,8 @@ export interface NavItem {
 /** ترتيب القائمة الرئيسية كما في المادة 5 من المواصفات. */
 export const NAV: NavItem[] = [
   { key: "dashboard", icon: IconLayoutDashboard, to: "/" },
-  { key: "assets", icon: IconDeviceDesktop, phase: 4 },
-  { key: "stock", icon: IconPackages, phase: 4 },
+  { key: "assets", icon: IconDeviceDesktop, to: "/assets", perm: "assets.view", serverOnly: true },
+  { key: "stock", icon: IconPackages, to: "/stock", perm: "stock.view", serverOnly: true },
   { key: "spaces", icon: IconBuildingCommunity, phase: 5 },
   { key: "facilities", icon: IconBallFootball, phase: 5 },
   { key: "resources", icon: IconBook2, phase: 5 },
@@ -42,7 +42,7 @@ export const NAV: NavItem[] = [
   { key: "maintenance", icon: IconTool, phase: 6 },
   { key: "purchasing", icon: IconTruckDelivery, phase: 6 },
   { key: "custody", icon: IconUserShare, phase: 6 },
-  { key: "suppliers", icon: IconAddressBook, phase: 4 },
+  { key: "suppliers", icon: IconAddressBook, to: "/suppliers", perm: "suppliers.view", serverOnly: true },
   { key: "floorplan", icon: IconMap2, phase: 8 },
   { key: "excel", icon: IconFileSpreadsheet, phase: 7 },
   { key: "documents", icon: IconArchive, phase: 7 },
@@ -51,10 +51,11 @@ export const NAV: NavItem[] = [
   { key: "settings", icon: IconSettings, to: "/settings" },
 ];
 
-/** صفحات قسم الإعدادات المنجزة في المرحلة 2. */
+/** صفحات قسم الإعدادات (المرجعيات أُضيفت في المرحلة 4). */
 export const SETTINGS_PAGES = [
   { key: "schoolInfo", to: "/settings/school" },
   { key: "hierarchy", to: "/settings/hierarchy" },
   { key: "branding", to: "/settings/branding" },
   { key: "printPreview", to: "/settings/print-preview" },
+  { key: "catalog", to: "/settings/catalog" },
 ] as const;

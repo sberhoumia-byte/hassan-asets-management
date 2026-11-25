@@ -12,6 +12,7 @@ import type {
   UserCreateInput,
   UserUpdateInput,
 } from "@hassan/validation";
+import type { AssetsApi, CatalogApi, StockApi, SuppliersApi } from "./phase4";
 
 export type RoleCode =
   | "ADMIN"
@@ -164,4 +165,9 @@ export interface Api {
   notifications(): Promise<NotificationItem[]>;
   /** متاحة مع الخادم فقط؛ وضع المراجعة لا يدير مستخدمين. */
   readonly users?: UsersApi;
+  // المرحلة 4 (الخادم فقط)
+  readonly catalog?: CatalogApi;
+  readonly assets?: AssetsApi;
+  readonly stock?: StockApi;
+  readonly suppliers?: SuppliersApi;
 }

@@ -1,3 +1,5 @@
+import { arPhase4 } from "./phase4.ar";
+
 export const ar: Record<string, string> = {
   "app.shortName": "التدبير المادي",
   "app.fullName": "نظام التدبير المادي لمؤسسة حسان بن ثابت بأورير",
@@ -364,4 +366,5 @@ export const ar: Record<string, string> = {
   "setup.token": "رمز الإعداد",
   "setup.tokenHint": "رمز SETUP_TOKEN المحدد في إعدادات الخادم",
   "setup.badToken": "رمز الإعداد غير صحيح",
+  ...arPhase4,
 };
