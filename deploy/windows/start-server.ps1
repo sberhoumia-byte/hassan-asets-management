@@ -43,6 +43,14 @@ if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
   Fail "Installez Docker Desktop depuis la page ouverte, redemarrez, puis relancez ce fichier."
 }
 
+# Docker Desktop needs WSL 2.
+& wsl.exe --status *> $null
+if ($LASTEXITCODE -ne 0) {
+  Say "Installation de WSL (necessaire a Docker, quelques minutes)..."
+  & wsl.exe --install --no-distribution
+  Fail "WSL est installe. REDEMARREZ l'ordinateur, ouvrez Docker Desktop, attendez qu'il soit pret, puis relancez ce fichier."
+}
+
 function DockerUp { & docker info *> $null; return ($LASTEXITCODE -eq 0) }
 if (-not (DockerUp)) {
   $dd = Join-Path $env:ProgramFiles 'Docker\Docker\Docker Desktop.exe'
