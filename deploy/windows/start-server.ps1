@@ -8,7 +8,7 @@
 #>
 $ErrorActionPreference = 'Stop'
 # Any unexpected error: show it and keep the window open, and keep a log on the Desktop.
-$Log = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Hassan-serveur-log.txt'
+$Log = Join-Path $PSScriptRoot 'Hassan-serveur-log.txt'
 try { Start-Transcript -Path $Log -Append | Out-Null } catch {}
 trap {
   Write-Host "`n!! ERREUR : $($_.Exception.Message)" -ForegroundColor Red
@@ -22,15 +22,10 @@ $RuleName = 'Hassan Assets (port 8080)'
 function Say($m)  { Write-Host "`n>> $m" -ForegroundColor Cyan }
 function Fail($m) { Write-Host "`n!! $m" -ForegroundColor Red; Read-Host "`nAppuyez sur Entree pour fermer"; exit 1 }
 
-# Administrator rights are needed once for the firewall rule.
+# Administrator rights are needed once for the firewall rule (the .bat asks for them).
 $me = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 if (-not $me.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-  try {
-    Start-Process powershell.exe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
-  } catch {
-    Fail "Il faut accepter la demande d'autorisation (bouton Oui). Relancez le fichier."
-  }
-  exit
+  Fail "Lancez Demarrer-serveur.bat (il demande l'autorisation administrateur)."
 }
 
 $Root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
@@ -128,6 +123,7 @@ $text = @"
 احتفظ بهذه المعلومات في مكان آمن (ورقة أو مفتاح USB). دون مفتاح التشفير لا يمكن استعادة أي نسخة احتياطية.
 "@
 [IO.File]::WriteAllText($info, $text, (New-Object Text.UTF8Encoding $true))
+[IO.File]::WriteAllText((Join-Path $PSScriptRoot 'Hassan-serveur.txt'), $text, (New-Object Text.UTF8Encoding $true))
 
 Write-Host "`n=============================================" -ForegroundColor Green
 Write-Host "  Serveur pret :  $Url" -ForegroundColor Green
