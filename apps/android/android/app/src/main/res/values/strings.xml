@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">التدبير المادي</string>
+    <string name="title_activity_main">التدبير المادي</string>
+    <string name="package_name">ma.hassanibnthabit.assets</string>
+    <string name="custom_url_scheme">ma.hassanibnthabit.assets</string>
+</resources>

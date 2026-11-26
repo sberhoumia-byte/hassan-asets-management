@@ -1,32 +1,42 @@
 # خادم API (NestJS) + أدوات الهجرة. يُبنى من جذر المستودع: docker build -f docker/Dockerfile.api .
 FROM node:22-bookworm-slim AS build
 WORKDIR /app
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json tsconfig.base.json ./
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 COPY packages/ packages/
 COPY database/package.json database/
-RUN npm ci --workspaces --include-workspace-root --ignore-scripts && npm rebuild argon2
+# محرك Prisma لنظام التشغيل في الصورة النهائية (Ubuntu 24.04 = OpenSSL 3)
+ENV PRISMA_CLI_BINARY_TARGETS=debian-openssl-3.0.x
+RUN npm ci --workspaces --include-workspace-root --ignore-scripts && npm rebuild argon2 \
+  # محرك هجرات Prisma يُنزَّل عند التثبيت؛ نشغّله هنا لأن التثبيت تجاهل السكربتات
+  && npm rebuild prisma @prisma/engines && test -n "$(ls node_modules/@prisma/engines/schema-engine-debian-openssl-3.0.x 2>/dev/null)"
 COPY database/ database/
 COPY apps/api/ apps/api/
+# تقارير PDF تستعمل نفس ملفات الترجمة التي تستعملها الواجهة
+COPY apps/web/src/i18n/ apps/web/src/i18n/
 RUN npm run generate -w @hassan/database && npm run build -w @hassan/api
 
-FROM node:22-bookworm-slim
+# متصفح PDF بنفس إصدار playwright-core المستعمل في الشيفرة (1.63.0) — نأخذ منه Chromium headless فقط
+FROM mcr.microsoft.com/playwright:v1.63.0-noble AS browsers
+
+FROM ubuntu:24.04
 WORKDIR /app
-ENV NODE_ENV=production
-# محرك PDF (المرحلة 7): Chromium من توزيعة Debian. الخطوط مضمنة في كل وثيقة (حزم @fontsource) فلا حاجة لخطوط النظام.
-# داخل الحاوية يعمل Chromium دون sandbox (مستخدم غير root، JavaScript معطل، لا شبكة، مصادر data: فقط).
-# النسخ الاحتياطي (المرحلة 9): pg_dump/pg_restore بنفس إصدار الخادم (16) من مستودع PostgreSQL الرسمي، وtar.
-RUN apt-get update && apt-get install -y --no-install-recommends chromium ca-certificates curl gnupg \
-  && install -d /usr/share/postgresql-common/pgdg \
-  && curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
-  && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
-  && apt-get update && apt-get install -y --no-install-recommends postgresql-client-16 \
-  && apt-get purge -y curl gnupg && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
-ENV CHROMIUM_PATH=/usr/bin/chromium PDF_NO_SANDBOX=true
+ENV NODE_ENV=production PLAYWRIGHT_BROWSERS_PATH=/ms-playwright PDF_NO_SANDBOX=true
+# - النسخ الاحتياطي (المرحلة 9): pg_dump/pg_restore 16 من مستودع Ubuntu الرسمي (نفس إصدار الخادم)، وtar.
+# - محرك PDF (المرحلة 7): Chromium headless من صورة Playwright الرسمية + مكتباته من Ubuntu. الخطوط مضمنة في كل وثيقة.
+#   داخل الحاوية يعمل دون sandbox (مستخدم غير root، JavaScript معطل، لا شبكة، مصادر data: فقط).
+RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client-16 ca-certificates tar \
+  && rm -rf /var/lib/apt/lists/*
+COPY --from=build /usr/local/bin/node /usr/local/bin/node
+COPY --from=build /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm && ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
+COPY --from=browsers /ms-playwright/chromium_headless_shell-1243 /ms-playwright/chromium_headless_shell-1243
 COPY --from=build /app /app
-RUN mkdir -p /data/storage /data/backups && chown -R node:node /data
-USER node
+RUN node /app/node_modules/playwright-core/cli.js install-deps chromium-headless-shell && rm -rf /var/lib/apt/lists/* \
+  && useradd --system --create-home --uid 1001 hassan \
+  && mkdir -p /data/storage /data/backups && chown -R hassan:hassan /data
+USER hassan
 EXPOSE 3000
 # عند كل تشغيل: تطبيق الهجرات الجديدة (غير هدّام) + بيانات الأساس (idempotent، لا تنشئ مستخدمين) ثم الخادم
 CMD ["sh", "-c", "cd /app/database && npx prisma migrate deploy && npx tsx seeds/seed.ts && cd /app/apps/api && node dist/main.js"]

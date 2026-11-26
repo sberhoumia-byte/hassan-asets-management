@@ -9,6 +9,7 @@ import { LetterheadView } from "../../print/LetterheadView";
 import { ScaledPreview } from "../../print/ScaledPreview";
 import { dayOf } from "../../lib/forms";
 import { ServerPdfButton } from "../../print/ServerPdfButton";
+import { printPage } from "../../lib/native";
 
 /**
  * وصل الإعارة/الإرجاع على صفحة A4 بترويسة المؤسسة المحفوظة، مع خانات التوقيع.
@@ -59,7 +60,7 @@ export function LoanReceiptPage() {
             </Button>
             <ServerPdfButton kind="loan" id={id} />
             {import.meta.env.MODE !== "review" && (
-              <Button leftSection={<IconPrinter size={16} />} onClick={() => window.print()} data-testid="print">
+              <Button leftSection={<IconPrinter size={16} />} onClick={printPage} data-testid="print">
                 {t("print.print")}
               </Button>
             )}

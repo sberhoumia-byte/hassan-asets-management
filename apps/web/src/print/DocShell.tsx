@@ -7,6 +7,7 @@ import { useI18n } from "../i18n";
 import { LetterheadView } from "./LetterheadView";
 import { ScaledPreview } from "./ScaledPreview";
 import { ServerPdfButton } from "./ServerPdfButton";
+import { printPage } from "../lib/native";
 
 /** شريط الوثيقة: رجوع، PDF من الخادم (مؤرشف)، وطباعة من المتصفح. */
 export function DocToolbar({ title, intro, back, serverPdf }: { title: ReactNode; intro: string; back: string; serverPdf?: { kind: "loan" | "custody" | "inventory"; id: string } }) {
@@ -25,7 +26,7 @@ export function DocToolbar({ title, intro, back, serverPdf }: { title: ReactNode
           </Button>
           {serverPdf && <ServerPdfButton kind={serverPdf.kind} id={serverPdf.id} />}
           {import.meta.env.MODE !== "review" && (
-            <Button leftSection={<IconPrinter size={16} />} onClick={() => window.print()} data-testid="print">
+            <Button leftSection={<IconPrinter size={16} />} onClick={printPage} data-testid="print">
               {t("print.print")}
             </Button>
           )}

@@ -1,6 +1,7 @@
 /** عقود المرحلة 7: التقارير (معاينة، PDF، Excel)، الأرشيف، الرسوم البيانية. الخادم فقط. */
 import type { ReportFilters, ReportKey } from "@hassan/validation";
 import type { Paged } from "./phase4";
+import { saveViaAndroid } from "../lib/native";
 
 export type DocLang = "ar" | "fr";
 export type ReportGroup = "assets" | "stock" | "spaces" | "resources" | "maintenance" | "purchasing" | "custody" | "inventory" | "general";
@@ -68,6 +69,11 @@ export interface DashboardCharts {
 
 /** يحفظ الملف على جهاز المستخدم (رابط تنزيل مؤقت). */
 export function saveDownload(d: Pick<GeneratedDownload, "blob" | "filename">) {
+  // تطبيق Android: الحفظ عبر الجسر الأصلي (WebView لا ينزّل روابط blob)
+  if ((window as unknown as { HassanAndroid?: unknown }).HassanAndroid) {
+    void saveViaAndroid(d.blob, d.filename);
+    return;
+  }
   const url = URL.createObjectURL(d.blob);
   const a = document.createElement("a");
   a.href = url;

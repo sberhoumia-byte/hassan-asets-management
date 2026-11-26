@@ -9,6 +9,7 @@ import { useI18n } from "../../i18n";
 import { ReportDocument } from "../../print/ReportDocument";
 import { ScaledPreview } from "../../print/ScaledPreview";
 import { sampleRows } from "../../print/sampleReport";
+import { printPage } from "../../lib/native";
 
 /**
  * معاينة الطباعة: تقرير نموذجي متعدد الصفحات يستعمل الهوية البصرية المحفوظة مركزياً
@@ -38,7 +39,7 @@ export function PrintPreviewPage() {
             </Button>
             {/* نسخة المراجعة المشتركة تعمل داخل إطار لا يسمح بنافذة الطباعة */}
             {import.meta.env.MODE !== "review" && (
-              <Button leftSection={<IconPrinter size={16} />} onClick={() => window.print()} data-testid="print">
+              <Button leftSection={<IconPrinter size={16} />} onClick={printPage} data-testid="print">
                 {t("print.print")}
               </Button>
             )}

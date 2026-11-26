@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 9 وأقدم: التقارير المحفوظة في مجلد تنزيلات التطبيق تُفتح عبر FileProvider. لا وصول لباقي التخزين. -->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <external-files-path name="downloads" path="Download/" />
+</paths>

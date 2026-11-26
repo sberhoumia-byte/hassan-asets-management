@@ -1,0 +1,46 @@
+{
+  "name": "hassan-assets-desktop",
+  "productName": "Hassan Assets",
+  "version": "1.0.0",
+  "private": true,
+  "description": "نظام التدبير المادي — تطبيق Windows (واجهة لخادم المؤسسة)",
+  "author": "Hassan Ibn Thabit School",
+  "main": "src/main.cjs",
+  "scripts": {
+    "prepare-connect": "node scripts/copy-connect.mjs",
+    "start": "npm run prepare-connect && electron .",
+    "build:win": "npm run prepare-connect && electron-builder --win nsis --x64",
+    "build:linux-dir": "npm run prepare-connect && electron-builder --linux dir"
+  },
+  "devDependencies": {
+    "electron": "45.3.0",
+    "electron-builder": "26.18.1"
+  },
+  "build": {
+    "appId": "ma.hassanibnthabit.assets",
+    "productName": "Hassan Assets",
+    "executableName": "HassanAssets",
+    "copyright": "مدرسة حسان بن ثابت الابتدائية — أورير",
+    "directories": { "output": "dist", "buildResources": "build" },
+    "files": ["src/**", "connect/**", "package.json"],
+    "asar": true,
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "build/icon.png",
+      "artifactName": "HassanAssets-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "التدبير المادي",
+      "uninstallDisplayName": "التدبير المادي — Hassan Assets",
+      "installerLanguages": ["ar_SA", "fr_FR"],
+      "language": "1025",
+      "deleteAppDataOnUninstall": false
+    },
+    "linux": { "target": "dir", "icon": "build/icon.png" }
+  }
+}

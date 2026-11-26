@@ -1,10 +1,11 @@
 {
   "name": "hassan-assets-management",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "private": true,
   "description": "HASSAN IBN THABIT – ASSETS MANAGEMENT SYSTEM | نظام التدبير المادي",
   "workspaces": [
-    "apps/*",
+    "apps/api",
+    "apps/web",
     "packages/*",
     "database"
   ],
@@ -18,8 +19,8 @@
     "dev:web": "npm run dev -w @hassan/web",
     "dev:api": "npm run dev -w @hassan/api",
     "build:web": "npm run build -w @hassan/web",
-    "build:android": "echo \"[المرحلة 10] أمر البناء لم يُربط بعد\" && exit 1",
-    "build:windows": "echo \"[المرحلة 10] أمر البناء لم يُربط بعد\" && exit 1",
+    "build:android": "bash apps/android/build-apk.sh",
+    "build:windows": "bash apps/desktop/build-windows.sh",
     "test": "npm test -w @hassan/web && npm test -w @hassan/api",
     "build:review": "npm run build:review -w @hassan/web",
     "test:e2e": "npm run test:e2e -w @hassan/web",

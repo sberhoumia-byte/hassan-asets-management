@@ -1,0 +1,14 @@
+{
+  "appId": "ma.hassanibnthabit.assets",
+  "appName": "التدبير المادي",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true,
+    "errorPath": "index.html?error=1"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
+  }
+}

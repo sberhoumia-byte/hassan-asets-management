@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <!-- صفحة محلية داخل تطبيقي Windows وAndroid: لا تحمّل أي مورد خارجي -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'none'" />
+  <title>الاتصال بخادم المؤسسة — التدبير المادي</title>
+  <link rel="stylesheet" href="connect.css" />
+</head>
+<body>
+  <main class="card" data-testid="connect">
+    <header>
+      <img src="logo.svg" alt="" width="56" height="56" />
+      <div>
+        <h1>نظام التدبير المادي</h1>
+        <p class="sub">HASSAN IBN THABIT – ASSETS MANAGEMENT</p>
+      </div>
+    </header>
+
+    <!-- متابعة تلقائية إلى الخادم المحفوظ -->
+    <section id="auto" hidden>
+      <p>جارٍ الاتصال بـ <bdi id="auto-url" dir="ltr"></bdi></p>
+      <div class="bar"><span></span></div>
+      <button type="button" id="change" class="link" data-testid="connect-change">تغيير عنوان الخادم</button>
+    </section>
+
+    <form id="form" hidden novalidate>
+      <p>أدخل عنوان خادم المؤسسة كما زوّدك به مسؤول النظام. يعمل التطبيق على هذا الخادم ولا يحفظ بيانات المؤسسة على الجهاز.</p>
+      <label for="url">عنوان الخادم</label>
+      <input id="url" type="url" dir="ltr" inputmode="url" autocomplete="url" spellcheck="false" placeholder="https://… أو http://192.168.1.10:8080" required data-testid="connect-url" />
+      <p class="hint">مثال على شبكة المؤسسة: <bdi dir="ltr">http://192.168.1.10:8080</bdi></p>
+      <p id="msg" class="msg" role="alert" hidden data-testid="connect-msg"></p>
+      <button type="submit" id="go" data-testid="connect-go">اتصال</button>
+    </form>
+
+    <footer>
+      <span id="version"></span>
+    </footer>
+  </main>
+  <script src="connect.js"></script>
+</body>
+</html>
