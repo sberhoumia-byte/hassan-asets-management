@@ -1,0 +1,21 @@
+# نشر على الإنترنت: Caddy أمام الواجهة بشهادة HTTPS تلقائية (Let's Encrypt) لاسم النطاق DOMAIN.
+# بلا نطاق مشترى يمكن استعمال <IP بشرطات>.sslip.io (يضبطه deploy/install.sh تلقائياً).
+#   docker compose -f docker/docker-compose.yml -f deploy/docker-compose.https.yml --env-file .env up -d --build
+services:
+  web:
+    ports: !reset []   # لا منفذ 8080 مكشوف: الوصول عبر Caddy فقط
+  caddy:
+    image: caddy:2.8.4-alpine
+    restart: unless-stopped
+    depends_on: [web]
+    ports:
+      - "80:80"
+      - "443:443"
+    command: ["caddy", "reverse-proxy", "--from", "${DOMAIN:?set DOMAIN in .env}", "--to", "web:80"]
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

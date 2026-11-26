@@ -1,0 +1,19 @@
+#cloud-config
+# يُلصق في خانة «Cloud config / User data» عند إنشاء خادم Ubuntu 24.04. يُملأ بالقيم الحقيقية خارج المستودع:
+#   __DEPLOY_KEY__   مفتاح SSH للقراءة فقط من مستودع GitHub (Deploy key)
+#   __REPO__         owner/repo
+#   __SETUP_TOKEN__  رمز شاشة الإعداد الأول
+#   __BACKUP_KEY__   مفتاح تشفير النسخ الاحتياطية (يحتفظ به المسؤول خارج الخادم)
+write_files:
+  - path: /root/.ssh/hassan_deploy
+    permissions: "0600"
+    content: |
+__DEPLOY_KEY__
+  - path: /root/.ssh/config
+    permissions: "0600"
+    content: |
+      Host github.com
+        IdentityFile /root/.ssh/hassan_deploy
+        StrictHostKeyChecking accept-new
+runcmd:
+  - [bash, -c, "git clone git@github.com:__REPO__.git /opt/hassan && cd /opt/hassan && SETUP_TOKEN='__SETUP_TOKEN__' BACKUP_ENCRYPTION_KEY='__BACKUP_KEY__' bash deploy/install.sh > /root/hassan-install.log 2>&1"]
