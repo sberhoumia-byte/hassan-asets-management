@@ -7,6 +7,15 @@
   setup token and backup key is written to the Desktop for the administrator.
 #>
 $ErrorActionPreference = 'Stop'
+# Any unexpected error: show it and keep the window open, and keep a log on the Desktop.
+$Log = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Hassan-serveur-log.txt'
+try { Start-Transcript -Path $Log -Append | Out-Null } catch {}
+trap {
+  Write-Host "`n!! ERREUR : $($_.Exception.Message)" -ForegroundColor Red
+  Write-Host "   (journal : $Log)" -ForegroundColor Red
+  Read-Host "`nPrenez une photo de cette fenetre, puis appuyez sur Entree pour fermer"
+  exit 1
+}
 $Port = 8080
 $RuleName = 'Hassan Assets (port 8080)'
 
@@ -16,7 +25,11 @@ function Fail($m) { Write-Host "`n!! $m" -ForegroundColor Red; Read-Host "`nAppu
 # Administrator rights are needed once for the firewall rule.
 $me = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 if (-not $me.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-  Start-Process powershell.exe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+  try {
+    Start-Process powershell.exe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+  } catch {
+    Fail "Il faut accepter la demande d'autorisation (bouton Oui). Relancez le fichier."
+  }
   exit
 }
 
