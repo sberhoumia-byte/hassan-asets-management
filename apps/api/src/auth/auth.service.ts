@@ -43,7 +43,8 @@ export class AuthService {
   /** الإعداد الأول: ينشئ حساب مدير النظام مرة واحدة فقط. */
   async setup(input: SetupAdminInput, setupToken: string | undefined, req: AppRequest) {
     const expected = config().SETUP_TOKEN;
-    if (expected && setupToken !== expected) throw E.forbidden("setup.token");
+    // فراغات زائدة (لوحات مفاتيح الهاتف، النسخ واللصق) أو \r من ملف .env كُتب على Windows لا تُفشل المطابقة
+    if (expected && setupToken?.trim() !== expected.trim()) throw E.forbidden("setup.token");
     const passwordHash = await this.hashPassword(input.password);
     await this.prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(724001)`;

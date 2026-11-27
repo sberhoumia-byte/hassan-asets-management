@@ -25,7 +25,7 @@ export function SetupPage() {
   const submit = handleSubmit(async (v) => {
     setError(null);
     try {
-      await api.setup({ ...v, ...(tokenQ.data ? { setupToken: token } : {}) });
+      await api.setup({ ...v, ...(tokenQ.data ? { setupToken: token.trim() } : {}) });
       await api.login(v.username, v.password);
       await qc.invalidateQueries();
       nav("/settings/school", { replace: true });
