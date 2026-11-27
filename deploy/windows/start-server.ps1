@@ -107,8 +107,14 @@ if (-not (Get-NetFirewallRule -DisplayName $RuleName -ErrorAction SilentlyContin
 
 # 5) Construction et demarrage
 Say "Construction et demarrage du systeme (la premiere fois : 10 a 20 minutes)..."
-& docker compose -f docker/docker-compose.yml --env-file .env up -d --build
-if ($LASTEXITCODE -ne 0) { Fail "Echec du demarrage. Verifiez la connexion Internet puis relancez." }
+# The parts already built are kept in Docker's cache: a retry continues where it stopped.
+$built = $false
+for ($try = 1; $try -le 3; $try++) {
+  & docker compose -f docker/docker-compose.yml --env-file .env up -d --build
+  if ($LASTEXITCODE -eq 0) { $built = $true; break }
+  if ($try -lt 3) { Say "Probleme de telechargement (tentative $try/3). Nouvel essai dans 20 secondes..."; Start-Sleep 20 }
+}
+if (-not $built) { Fail "Echec du demarrage apres 3 essais. Verifiez la connexion Internet puis relancez (le travail deja fait est conserve)." }
 
 Say "Attente du serveur..."
 $ready = $false
