@@ -27,6 +27,8 @@ import java.net.HttpURLConnection;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.json.JSONObject;
 
 /**
@@ -92,13 +94,37 @@ public class HassanShellPlugin extends Plugin {
         }
     }
 
+    /**
+     * عنوان الصفحة المعروضة فعلاً. دوال الجسر تعمل خارج خيط الواجهة، وWebView.getUrl() لا تُقرأ إلا منه،
+     * لذا نقرؤها عبر runOnUiThread، ونرجع إلى آخر عنوان سجّله المستمع إن تعذّر ذلك.
+     */
+    private String pageUrl() {
+        final String[] u = { null };
+        final CountDownLatch done = new CountDownLatch(1);
+        getActivity().runOnUiThread(() -> {
+            try {
+                u[0] = getBridge().getWebView().getUrl();
+            } finally {
+                done.countDown();
+            }
+        });
+        try {
+            done.await(2, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        return u[0] != null ? u[0] : currentUrl;
+    }
+
     private boolean onConnectPage() {
-        return currentUrl.startsWith(getBridge().getLocalUrl() + "/");
+        String local = getBridge().getLocalUrl();
+        String u = pageUrl();
+        return u.equals(local) || u.startsWith(local + "/") || u.startsWith(local + "?");
     }
 
     private boolean onServerPage() {
         String s = savedServer();
-        return s != null && s.equals(origin(currentUrl));
+        return s != null && s.equals(origin(pageUrl()));
     }
 
     private void toast(String msg) {
@@ -125,7 +151,8 @@ public class HassanShellPlugin extends Plugin {
         @JavascriptInterface
         public String check(String url) {
             String o = origin(url);
-            if (!onConnectPage() || o == null) return "{\"ok\":false,\"error\":\"invalid\"}";
+            if (o == null) return "{\"ok\":false,\"error\":\"invalid\"}";
+            if (!onConnectPage()) return "{\"ok\":false,\"error\":\"page\"}";
             HttpURLConnection c = null;
             try {
                 c = (HttpURLConnection) new URL(o + "/api/v1/health").openConnection();
