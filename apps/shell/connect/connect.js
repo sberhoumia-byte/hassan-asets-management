@@ -32,7 +32,12 @@
 
   /** يعيد أصل الخادم (بروتوكول + مضيف + منفذ) أو null. بلا بروتوكول: http للعناوين المحلية وhttps لغيرها. */
   function normalize(raw) {
-    let s = (raw || "").trim();
+    // أرقام عربية/فارسية ← لاتينية، وحذف الفراغات وعلامات الاتجاه التي تضيفها لوحات المفاتيح العربية
+    let s = (raw || "")
+      .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+      .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+      .replace(/[\u066b\u06d4]/g, ".")
+      .replace(/[\s\u200e\u200f\u2066-\u2069\u061c]/g, "");
     if (!s) return null;
     if (!/^[a-z]+:\/\//i.test(s)) {
       const local = /^(localhost|\d{1,3}(\.\d{1,3}){3}|[^./:]+)(:\d+)?(\/|$)/i.test(s);
